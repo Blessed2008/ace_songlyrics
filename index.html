@@ -1,0 +1,3416 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101b20">
+  <title>Apostolic Songs</title>
+
+  <style>
+    /* =========================================================
+       1. THEME
+       ========================================================= */
+    :root {
+      --bg: #101b20;
+      --surface: #18262c;
+      --surface-2: #203138;
+      --text: #f5f7f8;
+      --muted: #8b999e;
+      --accent: #82d4c5;
+      --accent-dark: #09221d;
+      --danger: #ff6672;
+      --line: rgba(255,255,255,.07);
+      --shadow: 0 14px 35px rgba(0,0,0,.28);
+      --ease: cubic-bezier(.22,1,.36,1);
+    }
+
+    [data-theme="light"] {
+      --bg: #eef4f2;
+      --surface: #ffffff;
+      --surface-2: #e6efec;
+      --text: #14221f;
+      --muted: #6f7f7b;
+      --accent: #4caf9d;
+      --accent-dark: #08221c;
+      --line: rgba(20,60,50,.10);
+      --shadow: 0 14px 35px rgba(30,70,60,.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI",
+                   "Noto Sans Ethiopic", Arial, sans-serif;
+    }
+
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+
+    /* =========================================================
+       2. APP SHELL
+       ========================================================= */
+    .app {
+      position: relative;
+      width: 100%;
+      max-width: 560px;
+      height: 100%;
+      margin: auto;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    /* Persistent back button */
+    .global-back {
+      position: absolute;
+      top: 29px;
+      left: 28px;
+      z-index: 200;
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: rgba(28,45,51,.88);
+      color: var(--text);
+      font-size: 31px;
+      line-height: 1;
+      cursor: pointer;
+      backdrop-filter: blur(18px);
+      box-shadow: 0 8px 22px rgba(0,0,0,.22);
+      transition: transform .35s var(--ease), background .35s;
+    }
+
+    .global-back:active {
+      transform: scale(.9);
+    }
+
+    /* Fixed top bar */
+    .topbar {
+      position: absolute;
+      top: 14px;
+      left: 16px;
+      right: 16px;
+      z-index: 50;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 17px;
+      border: 1px solid var(--line);
+      border-radius: 38px;
+      background: rgba(28,45,51,.86);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      flex: 1;
+      margin-left: 42px;
+      font-size: 25px;
+      font-weight: 850;
+      letter-spacing: -.5px;
+    }
+
+    .top-button {
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--text);
+      font-size: 27px;
+      cursor: pointer;
+      transition: transform .35s var(--ease), background .35s;
+    }
+
+    .top-button:active { transform: scale(.90); }
+    .top-button:hover { background: rgba(255,255,255,.06); }
+
+    /* Fixed bottom navigation */
+    .bottom-nav {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 50;
+      height: 78px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: rgba(20,31,36,.98);
+      border-top: 1px solid var(--line);
+      backdrop-filter: blur(18px);
+    }
+
+    .nav-button {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      border: 0;
+      background: transparent;
+      color: #cbd3d5;
+      font-size: 11px;
+      cursor: pointer;
+      transition: color .35s var(--ease), transform .35s var(--ease);
+    }
+
+    .nav-button.active { color: var(--accent); font-weight: 800; }
+    .nav-button:active { transform: translateY(2px); }
+
+    .nav-icon { font-size: 24px; line-height: 1; }
+
+    /* Playing Now button: clearly shows when playback is available. */
+    #playingNowNavIcon {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      font-size: 18px;
+    }
+
+    #playingNowNav.ready #playingNowNavIcon {
+      background: var(--accent);
+      color: #102126;
+      box-shadow: 0 0 18px rgba(130,212,197,.35);
+    }
+
+    /* =========================================================
+       3. HOME / SONG LIBRARY
+       Only .song-list-scroll scrolls.
+       ========================================================= */
+    .home {
+      position: absolute;
+      inset: 0;
+      padding-top: 104px;
+      /* No empty reserved area on first run. */
+      padding-bottom: 78px;
+      transition: padding-bottom .25s ease;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    /* Add floating-player clearance ONLY while the mini player exists. */
+    .home.mini-active {
+      padding-bottom: 176px;
+    }
+
+    .library-heading {
+      flex: none;
+      padding: 10px 20px 12px;
+    }
+
+    .library-heading h1 {
+      margin: 0;
+      font-size: 27px;
+      font-weight: 850;
+    }
+
+    .library-heading p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .song-list-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 4px 16px 14px;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+
+    .song-list-scroll::-webkit-scrollbar { width: 4px; }
+    .song-list-scroll::-webkit-scrollbar-thumb {
+      background: rgba(130,212,197,.28);
+      border-radius: 20px;
+    }
+
+    .song-list {
+      display: grid;
+      gap: 6px;
+    }
+
+    .song-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 56px minmax(0,1fr) 42px;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 5px;
+      border: 0;
+      border-radius: 17px;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+      transition: background .45s var(--ease), transform .35s var(--ease);
+    }
+
+    .song-row:hover { background: rgba(255,255,255,.035); }
+    .song-row:active { transform: scale(.985); }
+
+    /* AS artwork is used for EVERY song in the app.
+       The playing song gets additional animation below. */
+    .song-cover {
+      width: 56px;
+      height: 56px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background:
+        radial-gradient(circle at 30% 25%, rgba(130,212,197,.35), transparent 34%),
+        linear-gradient(135deg,#426b61,#17262d);
+      color: #fff;
+      font-size: 19px;
+      font-weight: 1000;
+      letter-spacing: -2px;
+      text-shadow: 0 0 12px rgba(130,212,197,.65);
+      box-shadow: 0 8px 20px rgba(0,0,0,.20), 0 0 16px rgba(130,212,197,.12);
+    }
+
+    .song-info { min-width: 0; }
+
+    .song-title {
+      display: block;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .song-hint {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .song-number {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .favorite-button {
+      width: 40px;
+      height: 40px;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--accent);
+      font-size: 23px;
+      cursor: pointer;
+    }
+
+    /* =========================================================
+       4. LYRICS SCREEN
+       ========================================================= */
+    .lyrics-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 40;
+      display: none;
+      background: var(--bg);
+    }
+
+    .lyrics-screen.open {
+      display: block;
+      animation: screenIn .75s var(--ease) both;
+    }
+
+    @keyframes screenIn {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .lyrics-header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 3;
+      height: 82px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: rgba(16,27,32,.88);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(18px);
+    }
+
+    .back-button,
+    .lyrics-favorite {
+      width: 44px;
+      height: 44px;
+      flex: none;
+      border: 0;
+      border-radius: 14px;
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 25px;
+    }
+
+    .lyrics-heading {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .lyrics-title {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 18px;
+      font-weight: 850;
+    }
+
+    .lyrics-subtitle {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .lyrics-scroll {
+      position: absolute;
+      top: 82px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow-y: auto;
+      padding: 18px 17px 220px;
+      overscroll-behavior: contain;
+    }
+
+    .lyrics-card {
+      padding: 19px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    /* The original lyrics are inserted here unchanged. */
+    .lyrics-card .lyrics-box {
+      display: block !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      color: var(--text) !important;
+      font-size: 1.08rem;
+      line-height: 1.8;
+      white-space: normal;
+    }
+
+    .lyrics-card .lyrics-box p { margin: 0; }
+
+
+    /* =========================================================
+       COMPLETE LYRICS GUARANTEE
+       The lyrics area is independently scrollable and has no
+       fixed height or line-clamping. Every line remains in the
+       DOM and can be reached by scrolling to the bottom.
+       ========================================================= */
+    .lyrics-scroll {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+
+    .lyrics-card,
+    .lyrics-card .lyrics-box,
+    .lyrics-card .lyrics-box * {
+      max-height: none !important;
+      height: auto !important;
+      overflow: visible !important;
+      -webkit-line-clamp: unset !important;
+      line-clamp: unset !important;
+      text-overflow: clip !important;
+    }
+
+    .lyrics-card .lyrics-box {
+      white-space: normal !important;
+      word-break: normal;
+      overflow-wrap: anywhere;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    .lyrics-card .lyrics-box p {
+      display: block !important;
+      margin: 0 0 1.1em !important;
+      white-space: normal !important;
+    }
+
+    .lyrics-card .lyrics-box br {
+      display: initial !important;
+    }
+
+    /* =========================================================
+       SONG ACTION CHOOSER
+       ========================================================= */
+    .song-action-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 110;
+      display: none;
+      align-items: flex-end;
+      background: rgba(0,0,0,.62);
+      backdrop-filter: blur(9px);
+    }
+
+    .song-action-overlay.open {
+      display: flex;
+    }
+
+    .song-action-sheet {
+      width: 100%;
+      padding: 15px 18px 25px;
+      border-radius: 30px 30px 0 0;
+      background: var(--bg);
+      box-shadow: 0 -22px 60px rgba(0,0,0,.45);
+      animation: actionSheetIn .65s var(--ease) both;
+    }
+
+    @keyframes actionSheetIn {
+      from { opacity: 0; transform: translateY(100%); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .action-handle {
+      width: 48px;
+      height: 5px;
+      margin: 0 auto 16px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.16);
+    }
+
+    .action-back {
+      display: block;
+      margin: 0 0 10px;
+      padding: 7px 4px;
+      border: 0;
+      background: transparent;
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .action-cover {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 10px;
+      display: grid;
+      place-items: center;
+      border-radius: 20px;
+      background: linear-gradient(135deg,#416b61,#203038);
+      color: #fff;
+      font-size: 24px;
+      font-weight: 950;
+    }
+
+    .action-title {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      text-align: center;
+      font-size: 21px;
+      font-weight: 900;
+    }
+
+    .action-subtitle {
+      margin: 4px 0 15px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .action-button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 9px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: var(--surface);
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      transition: transform .35s var(--ease), background .35s var(--ease);
+    }
+
+    .action-button:active {
+      transform: scale(.985);
+    }
+
+    .action-button:hover {
+      background: var(--surface-2);
+    }
+
+    .action-icon {
+      width: 44px;
+      height: 44px;
+      flex: none;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: var(--accent);
+      color: var(--accent-dark);
+      font-size: 20px;
+    }
+
+    .action-button strong {
+      display: block;
+      font-size: 15px;
+    }
+
+    .action-button small {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .action-cancel {
+      width: 100%;
+      margin-top: 10px;
+      padding: 13px;
+      border: 0;
+      border-radius: 15px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    /* =========================================================
+       5. PERSISTENT MINI PLAYER
+       ========================================================= */
+    .mini-player {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 86px;
+      z-index: 70;
+      display: none;
+      padding: 10px 11px 11px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 20px;
+      background: rgba(21,35,41,.97);
+      box-shadow: 0 15px 38px rgba(0,0,0,.35);
+      backdrop-filter: blur(20px);
+      cursor: pointer;
+    }
+
+    .mini-player.visible {
+      display: block;
+      animation: playerIn .75s var(--ease) both;
+    }
+
+    @keyframes playerIn {
+      from { opacity: 0; transform: translateY(65px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .mini-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mini-cover {
+      width: 45px;
+      height: 45px;
+      flex: none;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      background:
+        radial-gradient(circle at 30% 25%, rgba(130,212,197,.32), transparent 34%),
+        linear-gradient(135deg,#5d9387,#17262d);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 1000;
+      letter-spacing: -2px;
+      text-shadow: 0 0 10px rgba(130,212,197,.7);
+    }
+
+    .mini-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .mini-title {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-weight: 820;
+      transition: color .3s ease, text-shadow .3s ease;
+    }
+
+    /* AS identity shown beside the song name while audio is playing. */
+    .mini-title.playing::before {
+      content: "AS";
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 18px;
+      margin-right: 7px;
+      border: 1px solid rgba(130,212,197,.65);
+      border-radius: 7px;
+      background: rgba(130,212,197,.12);
+      color: var(--accent);
+      font-size: 9px;
+      font-weight: 1000;
+      letter-spacing: -1px;
+      vertical-align: -2px;
+      box-shadow: 0 0 12px rgba(130,212,197,.28);
+      animation: asNamePulse 1.35s ease-in-out infinite;
+    }
+
+    .mini-status {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .mini-play {
+      width: 42px;
+      height: 42px;
+      flex: none;
+      border: 0;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--accent-dark);
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .mini-progress {
+      width: 100%;
+      height: 3px;
+      margin-top: 8px;
+      overflow: hidden;
+      border-radius: 20px;
+      background: rgba(255,255,255,.08);
+    }
+
+    .mini-progress span {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--accent);
+    }
+
+    /* =========================================================
+       PLAYING NOW EMPTY STATE
+       ========================================================= */
+    .playing-now-empty {
+      position: absolute;
+      inset: 0;
+      z-index: 65;
+      display: none;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    .playing-now-empty.open {
+      display: flex;
+      animation: screenIn .45s var(--ease) both;
+    }
+
+    .playing-now-empty-header {
+      height: 82px;
+      flex: none;
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(16,27,32,.88);
+      backdrop-filter: blur(18px);
+    }
+
+    .playing-now-empty-title {
+      text-align: center;
+      font-size: 19px;
+      font-weight: 900;
+    }
+
+    .playing-now-back {
+      width: 44px;
+      height: 44px;
+      border: 0;
+      border-radius: 14px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 30px;
+      cursor: pointer;
+    }
+
+    .playing-now-center {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .random-play-button {
+      width: 94px;
+      height: 94px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto;
+      border: 1px solid rgba(130,212,197,.65);
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--accent-dark);
+      font-size: 36px;
+      padding-left: 5px;
+      cursor: pointer;
+      box-shadow: 0 0 0 0 rgba(130,212,197,.35), 0 18px 45px rgba(0,0,0,.30);
+      animation: emptyPlayPulse 2s ease-in-out infinite;
+    }
+
+    .random-play-button:active {
+      transform: scale(.92);
+    }
+
+    .playing-now-empty-text {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @keyframes emptyPlayPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(130,212,197,.22), 0 18px 45px rgba(0,0,0,.30); }
+      50% { box-shadow: 0 0 0 18px rgba(130,212,197,0), 0 18px 45px rgba(0,0,0,.30); }
+    }
+
+    /* =========================================================
+       6. FULL PLAYER
+       ========================================================= */
+    .player-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 90;
+      display: none;
+      align-items: flex-end;
+      background: rgba(0,0,0,.65);
+      backdrop-filter: blur(7px);
+    }
+
+    .player-overlay.open { display: flex; }
+
+    .player-sheet {
+      width: 100%;
+      padding: 15px 18px 25px;
+      border-radius: 30px 30px 0 0;
+      background: var(--bg);
+      box-shadow: 0 -22px 60px rgba(0,0,0,.45);
+      animation: sheetIn .65s var(--ease) both;
+    }
+
+    @keyframes sheetIn {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+
+    .handle {
+      width: 48px;
+      height: 5px;
+      margin: 0 auto 15px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.16);
+    }
+
+    /* Large AS artwork shown for every currently selected song. */
+    .player-cover {
+      width: min(70vw,320px);
+      aspect-ratio: 1;
+      margin: 0 auto 17px;
+      display: grid;
+      place-items: center;
+      border-radius: 27px;
+      background:
+        radial-gradient(circle at 30% 25%, rgba(130,212,197,.38), transparent 34%),
+        linear-gradient(135deg,#416b61,#17262d);
+      color: #fff;
+      font-size: 72px;
+      font-weight: 1000;
+      letter-spacing: -7px;
+      text-shadow:
+        0 0 12px rgba(130,212,197,.85),
+        0 0 30px rgba(130,212,197,.45);
+      box-shadow: 0 20px 50px rgba(0,0,0,.35), 0 0 30px rgba(130,212,197,.14);
+    }
+
+    .player-title {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      text-align: center;
+      font-size: 23px;
+      font-weight: 900;
+      transition: color .3s ease, text-shadow .3s ease;
+    }
+
+    /* Premium AS badge attached to the active song profile/title. */
+    .player-title.playing::before {
+      content: "AS";
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 24px;
+      margin-right: 9px;
+      border: 1px solid rgba(130,212,197,.7);
+      border-radius: 9px;
+      background: rgba(130,212,197,.12);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 1000;
+      letter-spacing: -1px;
+      vertical-align: 2px;
+      box-shadow: 0 0 16px rgba(130,212,197,.32);
+      animation: asNamePulse 1.35s ease-in-out infinite;
+    }
+
+    .player-subtitle {
+      margin: 5px 0 12px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .seek {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .player-controls {
+      display: grid;
+      grid-template-columns: repeat(5,1fr);
+      gap: 7px;
+      margin-top: 14px;
+    }
+
+    .player-button {
+      height: 47px;
+      border: 0;
+      border-radius: 15px;
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .player-button.main {
+      height: 57px;
+      background: var(--accent);
+      color: var(--accent-dark);
+      font-size: 22px;
+    }
+
+    .player-options {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    .option-button {
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .option-button.active {
+      background: var(--accent);
+      color: var(--accent-dark);
+      font-weight: 800;
+    }
+
+    /* =========================================================
+       7. SEARCH
+       ========================================================= */
+    .search-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      padding: 20px 16px;
+      background: rgba(8,14,17,.94);
+      backdrop-filter: blur(22px);
+    }
+
+    .search-overlay.open { display: block; }
+
+    .search-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: var(--surface);
+    }
+
+    .search-input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+    }
+
+    .search-results {
+      height: calc(100% - 100px);
+      margin-top: 12px;
+      overflow-y: auto;
+    }
+
+    .search-result {
+      padding: 13px 4px;
+      border-bottom: 1px solid var(--line);
+      cursor: pointer;
+    }
+
+    .search-result-title { font-weight: 800; }
+    .search-result-sub {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    /* =========================================================
+       8. SETTINGS
+       ========================================================= */
+    .settings-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 80;
+      display: none;
+      align-items: flex-end;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(8px);
+    }
+
+    .settings-overlay.open { display: flex; }
+
+    .settings-sheet {
+      width: 100%;
+      max-height: 84%;
+      overflow-y: auto;
+      padding: 18px 18px 100px;
+      border-radius: 28px 28px 0 0;
+      background: var(--bg);
+      animation: sheetIn .65s var(--ease) both;
+    }
+
+    .settings-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 23px;
+      font-weight: 850;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .setting-label { font-weight: 760; }
+    .setting-help {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .setting-button,
+    .setting-select {
+      min-height: 40px;
+      padding: 8px 11px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    /* =========================================================
+       9. SMALL MESSAGE
+       ========================================================= */
+    .toast {
+      position: absolute;
+      left: 50%;
+      bottom: 165px;
+      z-index: 150;
+      max-width: calc(100% - 35px);
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: #0b1519;
+      color: #fff;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%,20px);
+      transition: opacity .35s, transform .5s var(--ease);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%,0);
+    }
+
+
+    /* =========================================================
+       LIBRARY / FAVORITES / PLAYLISTS
+       ========================================================= */
+    .library-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 60;
+      display: none;
+      flex-direction: column;
+      padding-top: 104px;
+      /* No reserved bottom space until the mini player is visible. */
+      padding-bottom: 78px;
+      background: var(--bg);
+      transition: padding-bottom .25s ease;
+    }
+
+    .library-screen.open { display: flex; }
+
+    /* Keep the last Library item above the floating player only when needed. */
+    .library-screen.mini-active {
+      padding-bottom: 176px;
+    }
+
+    .library-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 10px 16px 14px;
+      overscroll-behavior: contain;
+    }
+
+    .library-top {
+      padding: 0 4px 16px;
+    }
+
+    .library-top h2 {
+      margin: 0;
+      font-size: 27px;
+      font-weight: 900;
+    }
+
+    .library-top p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .library-section {
+      margin-top: 14px;
+    }
+
+    .library-section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 4px 9px;
+      font-size: 16px;
+      font-weight: 850;
+    }
+
+    .library-count {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .library-empty {
+      padding: 18px;
+      border: 1px dashed var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+      color: var(--muted);
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .library-song {
+      display: grid;
+      grid-template-columns: 48px minmax(0,1fr) 38px;
+      align-items: center;
+      gap: 10px;
+      padding: 9px;
+      margin-bottom: 6px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: var(--surface);
+      cursor: pointer;
+      transition: transform .3s var(--ease), background .3s var(--ease);
+    }
+
+    .library-song:active { transform: scale(.985); }
+    .library-song:hover { background: var(--surface-2); }
+
+    .library-song-cover {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(135deg,#426b61,#213038);
+      color: #fff;
+      font-weight: 950;
+      box-shadow: 0 7px 18px rgba(0,0,0,.2);
+    }
+
+    .library-song-title {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .library-song-sub {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .library-remove {
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .library-remove:hover {
+      background: rgba(255,255,255,.06);
+      color: var(--danger);
+    }
+
+    .playlist-card {
+      margin-bottom: 8px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--surface);
+    }
+
+    .playlist-head {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .playlist-icon {
+      width: 47px;
+      height: 47px;
+      flex: none;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background: linear-gradient(135deg, var(--accent), #315b52);
+      color: var(--accent-dark);
+      font-size: 20px;
+      font-weight: 950;
+    }
+
+    .playlist-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .playlist-name {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 15px;
+      font-weight: 850;
+    }
+
+    .playlist-meta {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .playlist-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .library-action {
+      flex: 1;
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface-2);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 750;
+    }
+
+    .library-action.primary {
+      background: var(--accent);
+      color: var(--accent-dark);
+      border-color: transparent;
+    }
+
+    .playlist-songs {
+      display: none;
+      margin-top: 10px;
+      padding-top: 9px;
+      border-top: 1px solid var(--line);
+    }
+
+    .playlist-card.expanded .playlist-songs { display: block; }
+
+    .create-playlist {
+      width: 100%;
+      min-height: 48px;
+      margin-bottom: 16px;
+      border: 0;
+      border-radius: 17px;
+      background: var(--accent);
+      color: var(--accent-dark);
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(0,0,0,.18);
+    }
+
+    /* Playlist chooser */
+    .playlist-picker {
+      position: absolute;
+      inset: 0;
+      z-index: 130;
+      display: none;
+      align-items: flex-end;
+      background: rgba(0,0,0,.62);
+      backdrop-filter: blur(9px);
+    }
+
+    .playlist-picker.open { display: flex; }
+
+    .playlist-picker-sheet {
+      width: 100%;
+      max-height: 78%;
+      overflow-y: auto;
+      padding: 18px 18px 26px;
+      border-radius: 28px 28px 0 0;
+      background: var(--bg);
+      box-shadow: 0 -22px 60px rgba(0,0,0,.45);
+      animation: actionSheetIn .55s var(--ease) both;
+    }
+
+    .picker-title {
+      font-size: 20px;
+      font-weight: 900;
+      margin-bottom: 4px;
+    }
+
+    .picker-subtitle {
+      color: var(--muted);
+      font-size: 11px;
+      margin-bottom: 13px;
+    }
+
+    .picker-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      margin-top: 8px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--surface);
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .picker-item strong { flex: 1; }
+
+    .picker-item span {
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .picker-new {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      border: 1px dashed var(--accent);
+      border-radius: 15px;
+      background: transparent;
+      color: var(--accent);
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    /* AS playing artwork */
+    .player-cover,
+    .mini-cover {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .player-cover.playing,
+    .mini-cover.playing {
+      animation: asArtworkPulse 2.4s ease-in-out infinite;
+    }
+
+    .player-cover.playing::before,
+    .mini-cover.playing::before {
+      content: "";
+      position: absolute;
+      inset: -30%;
+      background: conic-gradient(
+        from 0deg,
+        transparent,
+        rgba(130,212,197,.5),
+        transparent 28%,
+        rgba(255,255,255,.18),
+        transparent 52%
+      );
+      animation: asSpin 4s linear infinite;
+    }
+
+    .player-cover.playing::after,
+    .mini-cover.playing::after {
+      content: "AS";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: inherit;
+      font-weight: 1000;
+      letter-spacing: -4px;
+      color: rgba(255,255,255,.96);
+      text-shadow:
+        0 0 8px rgba(130,212,197,.9),
+        0 0 22px rgba(130,212,197,.65),
+        0 0 42px rgba(130,212,197,.35);
+      animation: asHeartbeat 1.35s ease-in-out infinite;
+    }
+
+    .mini-cover.playing::after {
+      font-size: 17px;
+      letter-spacing: -2px;
+    }
+
+    @keyframes asNamePulse {
+      0%, 100% { transform: scale(1); opacity: .78; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
+
+    @keyframes asHeartbeat {
+      0%, 100% { transform: scale(1); opacity: .82; }
+      14% { transform: scale(1.12); opacity: 1; }
+      28% { transform: scale(1); }
+      42% { transform: scale(1.08); opacity: .96; }
+      56% { transform: scale(1); }
+    }
+
+    @keyframes asSpin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes asArtworkPulse {
+      0%, 100% { box-shadow: 0 20px 50px rgba(0,0,0,.35), 0 0 0 rgba(130,212,197,0); }
+      50% { box-shadow: 0 20px 50px rgba(0,0,0,.35), 0 0 32px rgba(130,212,197,.3); }
+    }
+
+    .playing-now-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 4px;
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 850;
+    }
+
+    .playing-now-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 10px currentColor;
+      animation: asDot 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes asDot {
+      to { transform: scale(1.65); opacity: .5; }
+    }
+
+    @media (max-width:420px) {
+      .topbar { left: 12px; right: 12px; }
+      .library-heading { padding-left: 16px; padding-right: 16px; }
+      .song-list-scroll { padding-left: 12px; padding-right: 12px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- Persistent back button: available on every screen. -->
+    <button class="global-back" id="globalBackButton" type="button" aria-label="Back">
+      ‹
+    </button>
+
+    <!-- =======================================================
+         TOP BAR
+         ======================================================= -->
+    <header class="topbar">
+      <div class="brand">Songs</div>
+      <button type="button" class="top-button" id="searchButton" aria-label="Search">⌕</button>
+    </header>
+
+    <!-- =======================================================
+         MAIN SONG LIBRARY
+         -------------------------------------------------------
+         Simple layout: no Group / Single / Recent tabs.
+         ======================================================= -->
+    <main class="home" id="home">
+      <div class="library-heading">
+        <h1>Browse Songs</h1>
+        <p>Tap a song to open its lyrics and player</p>
+      </div>
+
+      <!-- IMPORTANT:
+           This is the ONLY scrolling area on the main screen. -->
+      <div class="song-list-scroll" id="songListScroll">
+        <div class="song-list" id="songList"></div>
+      </div>
+    </main>
+
+
+
+    <!-- =======================================================
+         LIBRARY: FAVORITES + USER PLAYLISTS
+         ======================================================= -->
+    <section class="library-screen" id="libraryScreen">
+      <div class="library-scroll" id="libraryScroll">
+        <div class="library-top">
+          <h2>Your Library</h2>
+          <p>Favorites and playlists are saved on this device.</p>
+        </div>
+
+        <button type="button" class="create-playlist" id="createPlaylistButton">
+          ＋ Create New Playlist
+        </button>
+
+        <section class="library-section">
+          <div class="library-section-title">
+            <span>❤️ Favorite Songs</span>
+            <span class="library-count" id="favoriteCount">0 songs</span>
+          </div>
+          <div id="favoriteSongs"></div>
+        </section>
+
+        <section class="library-section">
+          <div class="library-section-title">
+            <span>🎵 My Playlists</span>
+            <span class="library-count" id="playlistCount">0 playlists</span>
+          </div>
+          <div id="playlistList"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- =======================================================
+         SONG ACTION CHOOSER
+         Appears when a song name is tapped.
+         ======================================================= -->
+    <section class="song-action-overlay" id="songActionOverlay">
+      <div class="song-action-sheet">
+        <div class="action-handle"></div>
+
+        <button class="action-back" id="actionBackButton" type="button">
+          ‹ Back
+        </button>
+
+        <div class="action-cover" id="actionCover">AS</div>
+        <div class="action-title" id="actionTitle">Song</div>
+        <div class="action-subtitle">Choose what you want to do</div>
+
+        <button type="button" class="action-button" id="openLyricsOption">
+          <span class="action-icon">📖</span>
+          <span>
+            <strong>Open lyrics</strong>
+            <small>Read the complete lyrics</small>
+          </span>
+        </button>
+
+        <button type="button" class="action-button" id="playAudioOption">
+          <span class="action-icon">▶</span>
+          <span>
+            <strong>Play audio</strong>
+            <small>Start playing this song</small>
+          </span>
+        </button>
+
+        <button type="button" class="action-button" id="addPlaylistOption">
+          <span class="action-icon">＋</span>
+          <span>
+            <strong>Add to playlist</strong>
+            <small>Save this song to one of your playlists</small>
+          </span>
+        </button>
+
+        <button type="button" class="action-cancel" id="cancelSongAction">Cancel</button>
+      </div>
+    </section>
+
+
+    <!-- PLAYLIST PICKER -->
+    <section class="playlist-picker" id="playlistPicker">
+      <div class="playlist-picker-sheet">
+        <div class="picker-title">Add to playlist</div>
+        <div class="picker-subtitle" id="pickerSongName">Choose a playlist</div>
+        <div id="playlistPickerList"></div>
+        <button type="button" class="picker-new" id="pickerNewPlaylist">＋ Create new playlist</button>
+        <button type="button" class="action-cancel" id="closePlaylistPicker">Cancel</button>
+      </div>
+    </section>
+
+    <!-- =======================================================
+         LYRICS SCREEN
+         ======================================================= -->
+    <section class="lyrics-screen" id="lyricsScreen">
+      <header class="lyrics-header">
+        <button type="button" class="back-button" id="closeLyrics">‹</button>
+
+        <div class="lyrics-heading">
+          <div class="lyrics-title" id="lyricsTitle">Song</div>
+          <div class="lyrics-subtitle">Lyrics</div>
+        </div>
+
+        <button type="button" class="lyrics-favorite" id="lyricsFavorite">♡</button>
+      </header>
+
+      <div class="lyrics-scroll" id="lyricsScroll">
+        <div class="lyrics-card" id="lyricsContent"></div>
+      </div>
+    </section>
+
+    <!-- =======================================================
+         PERSISTENT MINI PLAYER
+         ======================================================= -->
+    <div class="mini-player" id="miniPlayer">
+      <div class="mini-top">
+        <div class="mini-cover" id="miniCover">AS</div>
+
+        <div class="mini-info">
+          <div class="mini-title" id="miniTitle">No song selected</div>
+          <div class="mini-status" id="miniStatus">Tap a song to play</div>
+        </div>
+
+        <button type="button" class="mini-play" id="miniPlay">▶</button>
+      </div>
+
+      <div class="mini-progress">
+        <span id="miniProgress"></span>
+      </div>
+    </div>
+
+    <!-- =======================================================
+         PLAYING NOW EMPTY STATE
+         Shows a centered play button when no song is playing.
+         ======================================================= -->
+    <section class="playing-now-empty" id="playingNowEmpty">
+      <header class="playing-now-empty-header">
+        <button class="playing-now-back" id="playingNowEmptyBack" type="button">‹</button>
+        <div class="playing-now-empty-title">Playing now</div>
+        <div></div>
+      </header>
+
+      <div class="playing-now-center">
+        <div>
+          <button class="random-play-button" id="randomPlayButton" type="button" aria-label="Play random song">▶</button>
+          <div class="playing-now-empty-text">Tap play to start a random song</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================
+         FULL PLAYER
+         ======================================================= -->
+    <section class="player-overlay" id="playerOverlay">
+      <div class="player-sheet">
+        <div class="handle"></div>
+
+        <div class="player-cover" id="playerCover">AS</div>
+        <div class="player-title" id="playerTitle">Song</div>
+        <div class="player-subtitle">Apostolic Song</div>
+
+        <input class="seek" id="seek" type="range"
+               min="0" max="100" value="0" step="0.1">
+
+        <div class="time-row">
+          <span id="currentTime">0:00</span>
+          <span id="duration">0:00</span>
+        </div>
+
+        <div class="player-controls">
+          <button type="button" class="player-button" id="shuffleButton">🔀</button>
+          <button type="button" class="player-button" id="previousButton">⏮</button>
+          <button type="button" class="player-button main" id="playButton">▶</button>
+          <button type="button" class="player-button" id="nextButton">⏭</button>
+          <button type="button" class="player-button" id="repeatButton">🔁</button>
+        </div>
+
+        <div class="player-options">
+          <button type="button" class="option-button" id="back10Button">↶ 10s</button>
+          <button type="button" class="option-button" id="forward10Button">10s ↷</button>
+          <button type="button" class="option-button" id="speedButton">1×</button>
+          <button type="button" class="option-button" id="sleepButton">Sleep</button>
+          <button type="button" class="option-button" id="shareButton">Share</button>
+          <button type="button" class="option-button" id="closePlayerButton">Close</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================
+         SEARCH
+         ======================================================= -->
+    <section class="search-overlay" id="searchOverlay">
+      <button type="button" class="back-button" id="closeSearch">‹</button>
+
+      <div class="search-input-wrap">
+        <span>⌕</span>
+        <input class="search-input" id="searchInput"
+               placeholder="Search song or lyrics...">
+      </div>
+
+      <div class="search-results" id="searchResults"></div>
+    </section>
+
+    <!-- =======================================================
+         SETTINGS
+         ======================================================= -->
+    <section class="settings-overlay" id="settingsOverlay">
+      <div class="settings-sheet">
+        <div class="settings-title">
+          <span>Settings</span>
+          <button type="button" class="back-button" id="closeSettings">×</button>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Theme</div>
+            <div class="setting-help">Dark or light mode</div>
+          </div>
+          <button type="button" class="setting-button" id="themeButton">Dark</button>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Lyrics size</div>
+            <div class="setting-help">Change reading size</div>
+          </div>
+          <select class="setting-select" id="fontSize">
+            <option value="1">Normal</option>
+            <option value="1.12">Large</option>
+            <option value="1.25">Extra large</option>
+            <option value="1.4">Huge</option>
+          </select>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Favorites</div>
+            <div class="setting-help">Show saved songs</div>
+          </div>
+          <button type="button" class="setting-button" id="favoritesButton">View</button>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Recent songs</div>
+            <div class="setting-help">Show recently opened songs</div>
+          </div>
+          <button type="button" class="setting-button" id="recentButton">View</button>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Reset</div>
+            <div class="setting-help">Clear local settings</div>
+          </div>
+          <button type="button" class="setting-button" id="resetButton">Reset</button>
+        </div>
+
+        <p class="setting-help" style="line-height:1.7;margin-top:15px">
+          Audio files go in the <b>audio</b> folder.
+          Example: <b>audio/l1.mp3</b>.
+        </p>
+      </div>
+    </section>
+
+    <!-- =======================================================
+         BOTTOM NAVIGATION
+         ======================================================= -->
+    <nav class="bottom-nav">
+      <button type="button" class="nav-button active" data-page="home">
+        <span class="nav-icon">⌂</span>
+        <span>Home</span>
+      </button>
+
+      <button type="button" class="nav-button" data-page="library">
+        <span class="nav-icon">▢</span>
+        <span>Library</span>
+      </button>
+
+      <!-- Playing Now: icon changes to ▶ when nothing is playing. -->
+      <button type="button" class="nav-button" data-page="radio" id="playingNowNav">
+        <span class="nav-icon" id="playingNowNavIcon">▶</span>
+        <span>Playing Now</span>
+      </button>
+
+      <button type="button" class="nav-button" data-page="settings">
+        <span class="nav-icon">⚙</span>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <div class="toast" id="toast"></div>
+
+    <audio id="audio" preload="metadata"></audio>
+  </div>
+
+  <script>
+    /* =========================================================
+       SONG DATABASE — EDIT THIS SECTION
+       =========================================================
+
+       ADDING A NEW SONG:
+       1. Copy one song object.
+       2. Give it a new id: l43, l44, etc.
+       3. Change the title.
+       4. Replace the lyrics.
+       5. Put its MP3 in:
+            audio/l43.mp3
+
+       EXAMPLE:
+
+       {
+         id: "l43",
+         title: "My New Song",
+         lyrics: "<div class=\\"lyrics-box\\"><p>My lyrics...<br>Next line...</p></div>"
+       }
+
+       IMPORTANT:
+       Keep the id and MP3 filename the same.
+
+       IMPORTANT FOR FULL LYRICS:
+       Put the COMPLETE lyrics inside the "lyrics" value.
+       The website does NOT truncate the lyrics. The lyrics
+       screen scrolls independently so the entire text can be
+       reached even when a song has many verses.
+       ========================================================= */
+
+    /* =========================================================
+       HOW TO ADD A NEW SONG
+       ---------------------------------------------------------
+       1. Add the MP3 file to the same folder as the others:
+            audio/l43.mp3
+
+       2. Add one object to SONGS below. The ID MUST match the
+          MP3 filename (without .mp3). Example:
+
+          {
+            id: "l43",
+            title: "My New Song",
+            lyrics: `
+              <div class="lyrics-box">
+                <p>First line<br>
+                Second line<br>
+                Third line</p>
+              </div>
+            `
+          },
+
+       3. Save the HTML file and refresh the website.
+
+       IMPORTANT:
+       - id "l43" automatically loads audio/l43.mp3.
+       - Keep IDs unique.
+       - Keep the final comma when another song follows.
+       - Put the COMPLETE lyrics inside the lyrics field.
+       - Use <br> for a new lyric line.
+       - Do not put the MP3 path inside the song object; the app
+         builds it automatically from the ID.
+       ========================================================= */
+
+    /*
+       ARTWORK RULE
+       ---------------------------------------------------------
+       Every song uses the same "AS" artwork.
+       Do NOT add image filenames to individual songs.
+       The AS artwork is generated by the HTML/CSS automatically.
+       When a song is playing, the same AS artwork receives the
+       rotating glow + heartbeat animation.
+       ---------------------------------------------------------
+    */
+
+    const SONGS = [
+      {
+    "id": "l1",
+    "title": "ልዩ ነው ፍቅርህ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ልዩ ነው ፍቅርህ<br>\n<br>\nዋና የሆንኩኝ ኃጢአተኛ<br>\nድካሜ ከሰው ሁሉ የበረታ<br>\nጥፋቴ ገኖ ነፍሴን ለሞት ያስገዛ<br>\nለዚህ ሁሉ ስርየት አገኘሁ ባንተ ጌታ/2×<br>\n<br>\nላረክልኝ ልከፍል አስቤ<br>\nአጣሁልህ ፈላልጌ<br>\nምን ልስጥህ ምን ልክፈልህ<br>\nፍቅርህ ኢየሱስ ውስጤን ሞልቷል<br>\nምን ልስጥህ ምን ልክፈልህ<br>\nፍቅርህ ጌታ ማርኮኛል<br>\n<br>\nክንደ ብርቱ ሆነህ ሳለህ<br>\nወርደህ ደቀቅህ ለእኔ ብለህ<br>\nእድሜ ዘመኔን ላንተ ብገዛ<br>\nአልከፍለውም ያንተን ውለታ<br>\nዘመኔን በሙሉ ላንተ ብገዛ<br>\nልከፍል አልችልም ያንተን ውለታ<br>\n<br>\nክብርህን የተውከው ለእኔ ለደካማ<br>\nገና ከፍጥረቴ ሳለው ኃጢአተኛ<br>\nበደም ቃልኪዳንህ ልጅ አረከኝና<br>\nየፍቅርህን ጥግ አየሁ በመስቀልህ ስራ<br>\n<br>\nምን አይነት ፍቅር ነው<br>\nምን አይነት መውደድ<br>\nዎዎዎዎሆ ኦዎዎዎሆ<br>\nለእኔ ያሳየኸው ለእኔ የከፈልከው<br>\nበመስቀል ላይ ደክመሀል<br>\n<br>\nልዩ ነው ፍቅርህ ልዩ ነው<br>\nድንቅ ነው ኢየሱስ ለእኔ ያረከው<br>\nግሩም ነው ፍቅርህ ግሩም ነው<br>\nድንቅ ነው ኢየሱስ ለእኔ ያረከው<br>\n<br>\nእወድድሃለሁ ወድጄሃለሁ<br>\nፍቅርህ ኢየሱስ የእውነት ነው<br>\nእወድድሃለሁ እገዛልሀለው<br>\nእድሜ ዘመኔን ሰጥቼሀለሁ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l2",
+    "title": "ኢየሱስ ነው",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ለዘሪ ዘርን የሚሠጥ ለመብላት ደግሞ እንጀራ<br>\nከበረከቱ ሚያጠግባት ነፍስን በምልካም ሚመራ<br>\nየእጆችን ሥራ ሚባርክ የጽድቅን ፍሬ ሚያበዛ<br>\nየሌለን አድርጎ እንደ አለ ኢየሱስ ብቻ ነው ሚጠራ<br>\n<br>\nብቃታችን አቅማችን መቻላችን መቆማችን በኢየሱስ ነው|*4<br>\nመፈለግ ቢሆን ማድረግን የሠራ በእኛ ሕይወት<br>\nብንሰጥ ከተቀበልነው ኢየሱስ ነው ሁሉን ያረግው<br>\n<br>\n፩| በእጃችን ጥቂት ነበር ለእኛ እንኳን ከቶ ማይበቃ<br>\nኢየሱስ ግን አትረፈረፈው ፍሬያችን ዓለምን ሞላ<br>\nለቃሉ እየታመነ ያለውን እያደረገ<br>\nአንችልም ባልነው ነገር ላይ ኢየሱስ ነው ኃይሉን ያሳየን<br>\n<br>\n፪| ምስጋናን ሰጠ ለስሙ ለምሕረት ለእውነቱ ሲል<br>\nሁሉንም ያረገው እርሱ ፈልጎ ክብርን ሊቀበል<br>\nበኃይል ወይም በብርታት አይደለም በችሎታችን<br>\nኢየሱስ ነው ብቸኛው ምክንያት ዛሬ ላይ ለመቆማችን<br>\n<br>\nየምንመካበት የለን አንድ ሥራ<br>\nበሕይወት ያኖረን የእርሱ ምሕረት ብቻ<br>\nክብርን እንሰጣለን ወርደን ከክብራችን<br>\nአስቦናል እና በመዋረዳችን<br>\n<br>\nዝለን ነበር ደርሰን ልንወድቅ<br>\nአንድ እርምጃ ቀርቶን ለሞት<br>\nዓይቶ ጠላት ሲል አበቃ<br>\nየምሕረት ግን ጌታ መጣ<br>\n<br>\nእንደ ገና ዕድል ሰጥቶ<br>\nእንደ ገና ጸጋ ሞልቶ<br>\nእንደ ገና ጨመረልን<br>\nእንደ ገና የድል ዘመን<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l3",
+    "title": "አሁንም ተመስገን",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ኃይል የሌለውን ደካማውን<br>\nአሬ እንደ ምን አሰብከው<br>\nከበለሱ በታች ያለውን<br>\nለካ በአንተ ዘንድ ተስፋ አለው<br>\n<br>\nየወደቀው እስኪነሳ<br>\nእጅህ ለምህረት የበረታ<br>\nየሟቹን ሞት የማትፈቅድህ<br>\nበክንድህ ጽናት ምትራመድህ<br>\n<br>\nስንቶች አረፉ በክንፍህ ጉያ <br>\nከልለሀቸው በፍቅርህ ከሌላ <br>\nእኔም በአንተ ስለ ታሰብኩኝ<br>\nምህረትህን እዘምራለሁኝ<br>\n<br>\nአሁንም ተመስገን|፪<br>\nኢየሱሴ ተመስገን<br>\n<br>\nየሕይወቴ ብርታት መታመኛዬ የነፍሴ መዳኛ<br>\nአቅም የሆንከኝ የኑሮዬ ጣእም የልቤ መጽናኛ<br>\nከማንም በላይ የምትረዳኝ ሚገባህ የውስጤ<br>\nጉልደቴን አይተ ገሸሽ የማትል ደጉ ካህኔ<br>\n<br>\nበውድቀቴ ከቶ አትስቅም<br>\nየነፍሴን ሞት አንተ አትፈቅድም<br>\nወደህኛል ከክብሩህ ላይ<br>\nላትተወኝ ምለህ እስከ ሰማይ<br>\n<br>\nከጠብባን ጥበብ የሰወርከውን ሰማያዊ ምስጥር<br>\nሀያላን በሀይላቸው ያላገኙትን ያን ታላቅ ክብር<br>\nበደካማው በኔ ገልጠሃልና የከበረውን ተስፋ<br>\nከዘላለም በፍት ለነ ያሰብከው ነበረ እንዳልጠፋ<br>\n<br>\nብልበማይበላው በህይወት መዝገብ ላይ<br>\nስሜን ለጻፍከው ካንተጋር እንድኖር በሰማይ<br>\nመርገመን ሽረ ያን ሀፍረተን ላስወገድከው<br>\nልቤን በፍትህ ባፈስው ይህም ስያንስ ነው<br>\n<br>\nአሁንም ተመስገን...<br>\n<br>\nልቤን ደግፈ ያዝከው<br>\nዝሎ እንዳይወድቅ ለጠበከው<br>\nበድካም ብሆን በብርታቴ<br>\nአልተለየኝም አብሮነት<br>\n<br>\nየምህረት ደጂህን አልዘጋህም<br>\nአምርረ አትጨክንምና በኔ<br>\nአላማህ ፍቅር ነው ኢየሱሰ<br>\nይህን አይችአለሁ በዘመኔ<br>\n<br>\nበውድቀቴ...<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l4",
+    "title": "ልጄ ይመለሳል",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ደካማ ነኝ ብዬ የማትተወኝ የማትተው<br>\nእኔ አልሆንም ስል የማትጥለኝ የማትጥል<br>\nበቃ ተወኝ ብዬ የማትተወኝ የማትተው<br>\nበኔ ተስፋ ቆርጠህ የማትሄድብኝ የማትሄድ<br>\n<br>\nእኔ አላየሁም እንዳንተ ያለ አላየሁም<br>\nአላገኝም አንተን የሚመስል አላገኝም<br>\n<br>\nእኔን ልትይዘኝ መረብህን ጣልክ<br>\nአሳዬን ሳጠምድ አንተ ነፍሴን ያዝክ<br>\nኃጢአቴ ብዙ ነው እንዳላስኮንንህ<br>\nከኔ ተለይ ባክህ ብቻዬን ልሁን<br>\n<br>\nድምጼን ሳትሰማው አስጠግተኸኝ መቼ ታመንኩህ<br>\nእንደማያውቀው ሰው እንደ ጠላቱ ረግሜ ካድኩህ<br>\nሲገፉ ሲመቱ በጥፊው መሃል እኔን ታያለህ<br>\nአሳዝኜህ እንኳን እንዳልጠፋብህ ትሳሳልኛለህ<br>\n<br>\nእኔ አላየሁም እንዳንተ ያለ[መልካም] አላየሁም<br>\nአላገኝም አንተን የሚመስል[እንዳንተ ቸር] አላገኝም<br>\n<br>\nድርሻዬን ጠይቄ ስገፋው ፍቅርህን<br>\nሞቴን አትመኝም አታውቅም መርገምን<br>\nበበር ላይ ሆነህ ደጅ ደጁን ታያለህ<br>\nልጄ ይመለሳል ይመጣል ትላለህ<br>\n<br>\nሞቴን ስጠብቅ ተስፋ ስቆርጥ እጄን ትይዝና<br>\nበተወጉ እጆችህ እምባን ከአይኔ ታብስልኝና<br>\nሚስጥሬን ሸፍነህ በደምህ አጥበህ ፊትህ ስታቆሜኝ<br>\nእንዳንተ የሚወድ አፍቃሪ ወዳጅ ሌላን አላውቅም<br>\n<br>\nማነው የጠፋን ሚፈልግ  ማነው የወደቀን አንሺ<br>\nማነው  ተስፋ ለሌለው ማነው ተስፋን የሚሰጥ<br> \nማነው የደሃ ደግ አባት  ማነው የምስኪኑ ወዳጅ<br>\nማነው ድካምን የሚያውቅ ማነው ለነፍስ የሚጨነቅ<br>\n<br>\nመልካም የሚያደርግ በጽድቅ የሚሄድ ዘወትር ይታወሳል<br>\nየሚጠፋውን ግን የደከመን ነፍስ ማንስ ያስተውላል<br>\nለሚስኪኖች ወዳጅ ተስፋ ለሌለው አዲስ ማንነት<br>\nሞቱን አይፈቅድም ያጸናዋል ሊያኖረው በህይወት<br>\n<br>\nገንዘብ የሌለውን ወዳጅ የሌለውን ማንም አይቀርብም<br>\nየሚጠራበትን ስሙንም እንኳን ከቶ አያውቅም<br>\nጎጆዬን አትንቅም አብረኸኝ ልትበላ ዘወትር ትመጣለህ<br>\nትህትና ይገርማል ከደጅ ሆነ ክፈት ትለኛለህ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l5",
+    "title": "አይነስብህ ምስጋናዬ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            አረገኝ እጥፍ ድርብ<br>\nሊያሳፍር ጠላትን<br>\nአቆመኝ በተራራው ላይ<br>\nላምልከው (ላክብረው) ይሁን የበላይ<br>\n<br>\nይክበርልኝ ይሁን የበላይ<br>\nይንገስልኝ ይሁን የበላይ<br>\nይሁን የበላይ <br>\n<br>\nከመስዋእት ጋራ መቅደስህ ገባለው<br>\nአምላኬ (ጌታዬ) ለክብርህ እሰግድልሃለሁ<br>\n<br>\nአይነስብህ ምስጋናዬ<br>\nአይነስብህ አምልኮዬ<br>\nአይነስብህ እልልታዬ <br>\nአይነስብህ አይነስብህ <br>\n<br>\n  አረገኝ እጥፍ...<br>\nስለዚህ በምስጋና ላይ ምስጋናን እጨምራለሁ<br>\nየወደድከኝን ኢየሱስ ከፍ ከፍ አደርግሃለሁ<br>\nስለዚህ በክብርም ላይ ክብርን እጨምራለሁ<br>\nየወደድከኝን ጌታ ከፍ ከፍ አደርግሃለሁ<br>\n       ከፍ ከፍ አደርግሃለሁ...<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l6",
+    "title": "ኢየሱስ መገኘትህ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ኢየሱስ መገኘትህ ህይወቴን ይግዛና<br>\nመንፈሴም ይታደስ ክብርህን ልይና<br>\nበግርማህ ልታጀብ መነካቴ ይታይ<br>\nነፍሴም ታወድስህ እያለች የበላይ<br>\n<br>\nኢየሱስ/2* መገኘትህ ይኑር በህይወቴ<br>\nጌታዬ/2* ህልውናህ ይኑር በእኔነቴ<br>\n<br>\nየናርዶሱን ሽቶ ሰብሬ በፊትህ<br>\nክብርን ሳይ እጠግባለው የሱሴ በቤትህ<br>\nመገኘትህ ለእኔ የህይወት ምንጭ ነው<br>\nይቆጣጠረኛል ሁሌም እረካለው<br>\n<br>\nየመኖሬ ትርጉም ሚስጥር<br>\nመገኘትህ ሆኖኝ አጥር<br>\nበምስጋና ከፍታውን እወጣለው<br>\nታላቅ ፍቅርህ ጉልበት ሆኖኝ እዘምራለው<br>\n<br>\nቅዱስ ቅዱስ ልበል በማደሪያህ ልጩህ<br>\nአዳዲሱን ቅኔ ነፍሴ ትቀኝልህ<br>\nመላዕክት ያግዙኝ ቅዱሳንም ሁሉ<br>\nለድንቅ መገኘትህ ክብርን ይሰጣሉ<br>\n<br>\nየመጥራትህ ታላቅ ተስፋ<br>\nለጉዞዬ ቀለብ ሆኗል ክብርህ ይስፋ<br>\nየቀራኒዮ ታላቅ ፍቅርህ<br>\nለኔ አጥር ነው ሁሌም ይግዛኝ መገኘትህ<br>\n<br>\nእያንዳንዱን ደቂቃ <br>\nእያንዳንዱን ሰከንድ<br>\nተገኝልኝ መድሀኒቴ<br>\nኑርልኝ በህይወቴ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l7",
+    "title": "የምስራች",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ድቅድቅ ጨለማ አህዛብን ሁሉ ሸፍኗ<br>\nየእ/ር ክብር በፅዮን ላይ ግን ወጥቷል<br>\nአላማ ይዛ እጅግ የምታስፈራ<br>\nታጥቃለች ፅዮን ብርሃን ልታበራ<br>\n<br>\nለመውረስ ለመስፋት ቃልኪዳን ያላት<br>\nየገሃነም ደጆች ከቶ የማይችሏት<br>\nየወንጌልን ችቦ ለኩሳ ወጥታለች<br>\nየምስራች ፅይን ምድርን ትወርሳለች<br>\n<br>\nየምስራች ኢየሱስ ነገሰ<br>\nየምስራች ታላቅ የምስራች<br>\nየምስራች ክብርንም ለበሰ<br>\nየምስራች ሀሰት አፏን ዘጋች<br>\n<br>\n1. ስትታይ ብትመስልም የስንዴ ቅንጣት<br>\nየተስፋውን ቃል ኪዳን ኢየሱስ የሰጣት<br>\nበስሙ የተጠራች ነች የአብርሃም ዘር<br>\nዙሪያዋ ያሉትን መውረሷ አይቀር<br>\n<br>\nወደብርሃኗ አህዛብ በሙሉ<br>\nየምድር ነገስታት ገና ይመጣሉ<br>\nበየተራራው በየከፍታው<br>\nክብሩ ያበራል ይወጣል ዝናው<br>\n<br>\n2. የምስራቹን ቃል ደፍራ ልታወራ<br>\nበሃይል ታነሳለች ድምፅዋን ሳትፈራ<br>\nበስሙ ያለውን የሐጢያት ስርየት<br>\nገና ታውጃለች ለዓለም ሁሉ ፍጥረት<br>\n<br>\nየሚድኑትን የሱስ ይጨምራል<br>\nየተናገረው ቃሉ ይፈፀማል<br>\nበታምር በድንቅ መንፈሱን በማደል<br>\nስለዚህ መዳን አብሮ ይመሰክራል<br>\n<br>\nኢየሱስ በግርማው በፅዮን ይታያል<br>\nይገናል ክብሩ ለዓለም ሁሉ ያበራል<br>\nምርኳችን ገና ይመለሳል<br>\nጌታችን ብዙዎችን ይወርሳል<br>\nይበዛል ምስጋና እና መዝሙር<br>\nሙታንን ታወጣለች ምድር<br>\n<br>\n3. በዘመን ፍፃሜ የእግዚአብሔር ቤት<br>\nፀንታ ትቆማለች በተራሮች አናት<br>\nየተናገረውን የአፉን ቃል በሙሉ<br>\nኢየሱስ ሊፈፅመው አሁን ነው ዘመኑ<br>\n<br>\nእርሱ ካዘዘ እርሱ ይሁን ካለ<br>\nየሚከለክል ኸረ ማንም የለ<br>\nየሀሰተኞች ነብያትን አፍ<br>\nዘግቶ በክብር ይላል ከፍ ከፍ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l8",
+    "title": "የእንደገና አምላክ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            በቀናት ቁጥር በዘመን ብዛት<br>\nእርሱ አይደከመው ከቶ ለመስራት<br>\nየሁሉ ጌታ በሁሉ ላይ<br>\nዛሬም ይሰራል ነው ኤልሻዳይ<br>\n<br>\n       ይነሳል የሞተው ነገር <br>\n       አይችልም በፊቱ ሲቆም<br>\n       ሸለቆ በውሃ ይሞላል<br>\n       ይህም ለእርሱ ቀላል ነው ቀላል<br>\n       <br>\nባለቀው ላይ ባበቃው ላይ<br>\nትስራለህ ያለከልካይ<br>\n<br>\n1/  አይነሰም ተብሎ በተዘጋበት<br>\n ዳግመኛ ላይመለስ ተስፋ የታጣለት <br>\n በሀይሉ እየገባ በተዘጋ በር<br>\n እግ/ር ያደርጋል አዲስ አዲስ ነገር <br>\n <br>\n        የእንደገና አምላክ ስራህ የማያልቅ<br>\n        አበቃ ሚባል ነገር የማታውቅ <br>\n        ባለቀው ላይ ባበቃው ላይ<br>\n        ትስራለህ ያለከልካይ <br>\n<br>\n2/  የደረቁ አጥንቶች የተበታተኑ<br>\nከአፍህ ቃል ሲወጣ ሰራዊቶቹ ሆኑ<br>\nሀይሉን ከአንተ አስጠግቶ ማነው የተጎዳ<br>\nታስነሳለህ በህይወት ሙቱን ገብተህ ጓዳ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l9",
+    "title": "ሺ ክንድ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ሺ ክንድ ሲለካ ውሀውን ሲያደርሰው ከእግሬ<br>\nዳግመኛ ሲለካ ሲያደርስ ከጉልበቴ<br>\nአሁንም ከፍ ሲል ደግም ከወገቤ<br>\nእስኪያጥለቀልቀው መላ ሰውነቴን<br>\n[ኧረ እኔስ ፍፁም አልረካሁም]<br>\n<br>\nእስከ እግሬም[ወገቤም] አይደል ወይ እስከ ጉልበቴ[አንገቴ]<br>\nይምጣ ውሀው ያጥለቅልቅ መላ ሰውነቴን [ያርሰው መላ ህዋሳቴን]<br>\nይምጣ ውሀው ያጥለቅልቅ መላ ሰውነቴን[ሀይልህ ያድሰው ይለውጥ ማንነቴን]<br>\n<br>\nአንተ አትሞትም ብለህ ካዳንከኝ በኋላ<br>\nመልሰህ አትተወኝ አትሰጠኝ ለጠላት<br>\nአንቺ አትሞቺም ብለህ ካዳንከኝ በኋላ<br>\nመልሰህ አትተወኝ አትሰጠኝ ለጠላት<br>\n<br>\nይልቁንም ምህረት እያበዛህልኝ<br>\nውስጤን እየሰራህ ደግሞም እያስዋብክ<br>\nለሰማዩ መንግስት ሁሌ እያዘጋጀኸኝ<br>\nውዴ አደራህን ተስፋ አትቁረጥብኝ<br>\n<br>\nመንፈስህ ነው ብርታቴ ፀጋህ ድጋፌ<br>\nክብርህን እንዳይ ሚረዳኝ ፊትህን ሚያሳየኝ<br>\n<br>\nአድርሰኝ ወደ ከፍታ ሳበኝ ወደ ቅዱሱ ስፍራ[አንተ ተራራ] [ቅድስት ከተማ][ፅዮን ተራራ]<br>\n  ወደ እምነት ከፍታ ወደ ፀጋ ከፍታ<br>\n  \"    ሀይል \"   \" መንፈስ ከፍታ<br>\n  አንተን ማየት ወደ ምችልበት ስፍራ<br>\n<br>\nአንዴ መሆን ትኩስ እንዴ መሆን ቀዝቃዛ<br>\nአይሁንብህ ውዴ ከአፍህ እዳልተፋ<br>\n<br>\nለብ ባለ ህይወት መመላለስ ይብቃ <br>\nእሳትህን አውርድ ዛሬም ያነቃቃኝ <br>\nአድርሰኝ የሱሴ ደግሞ ወደ ከፍታ<br>\nአንተን ማየት ልቻል ሀይሌን አድስና<br>\n<br>\nማደጌ በነገር ሁሉ እንዲገለጥ <br>\nበመንፈስ በሀይል በፀጋ ልበልፅግ<br>\n<br>\nየሰማያት መስኮት ይከፈትልኝ<br>\nታላቁን ሀይልህን የሱስ ላክልኝ<br>\nስጋዬን እራሴን የሚያስክደኝ<br>\nሁሌ ሰማይ ሰማይ ሰማይ የሚያሳየኝ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l10",
+    "title": "Only one",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            There's only one God who reigns<br>\nAnd there's only one God who loves us<br>\nOnly one worthy of praise\nJesus<br>\n<br>\nThere's only One Name that saves<br>\nAnd there's only One Name that frees us<br>\nOnly One Name with all power\nJesus<br>\n<br>\nAll of my heart<br>\nAll my devotion is Yours<br>\nLet Your righteous Name<br>\nBe exalted in all of the earth<br>\n<br>\nI will lift up the Name of the One who is worthy of praise<br>\nI adore You, You are worthy, GodJesus<br>\nI will declare to the nations<br>\nThe only Name that can save us<br>\nYou are worthy, God\nJesus!<br>\n<br>\nI will lift You up<br>\nWe lift up your Name<br>\n<br>\nOnly one God <br>\nAnd only one Name\nJesus <br>\n<br>\nOne God, One faith <br>\nOne Baptism in the name\nJesus<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l11",
+    "title": "በባዶ ይሰራል",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            በባዶ ይሰራል ይሰራል ጌታዬ<br>\nኃይሉን በዚያ ይገልጣል ሀያል ነው አምላኬ<br>\n<br>\nለታመነው ለታመነው ድንቅ ማዳኑን <br>\nፊቱ በእምነት ለቀረበው ባዶ እንስራውን (ሁለት አሳውን)<br>\nበበረከት ማትረፍረፍን ይችላል ጌታዬ<br>\nእኔም ለዚህ ምስክር ነኝ ስላየው በአይኔ<br>\n<br>\nጉልበቴን ሰጥቼ መች ደከመኝ እኔ<br>\nአትረፍኩኝ እንጂ እጥፍ ሆነ ሀይሌ<br>\nአንተን በማገልገል ሀይል አለ በዚያ<br>\nየደከመ አምልኮ እጅጉን በረታ<br>\n<br>\nሀይሌ በዛልኝ ደግሞ በድካሜ<br>\nበእጥፍ ጨመረልኝ እጥፍ ሆነ ሀይሌ<br>\nብርታትህን አምናለው ይጨምራል ገና<br>\nያደርሰኛል ደግሞ እስከ ፂሆን ተራራ<br>\n<br>\nእምነቴን አልናቀው ብትሆን ሰናፍጭ<br>\nእዘዝበት አለኝ በማትሞላው እጅ<br>\nተራራዬን አለው ነህ ደልዳላ ሜዳ<br>\nትንሿን እምነቴን አይቶልኛልና<br>\n<br>\nበፊቴ የሚቆም የሚያስቸግረኝ<br>\nአይኖርም ከእንግዲህ እምነት ስላለኝ<br>\nበስሙ እያዘዝኩኝ ክፉን አሸንፌ<br>\nበቤቱ ኖራለው በጥላው አርፌ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l12",
+    "title": "ትጠበቃለህ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ብዙ ኖሬአለሁ ቤተሳይዳ ላይ<br>\nሕመሜን ይዤ ፈውስንም ሳላይ<br>\nመልዐኩ መጥቶ እስኪያናውጠው<br>\nነበር ተራዬን የምጠብቀው <br>\n<br>\nብዙዎች [ሌሎች] ሲገቡ እኔ እያየሁ<br>\nብዙ ተራዎች ነበር ያለፉት<br>\nዛሬ ግን ለእኔ ልዩ ቀን ነው<br>\nኢየሱስ ራስህ ነህ የምትመጣው<br>\n<br>\nትጠበቃለህ ትጠበቃለህ ትጠበቃለህ<br>\nበእዚህ ጉባዔ የጌቶች ጌታ ኢየሱስ ታልፋለህ<br>\nትጠበቃለህ ትጠበቃለህ ትጠበቃለህ<br>\nበእኔ ሠፈር የጌቶች ጌታ ኢየሱስ ታልፋለህ<br>\nትጠበቃለህ ትጠበቃለህ ትጠበቃለህ<br>\nበእዚህ ጉባዔ የጌቶች ጌታ ኢየሱስ ታልፋለህ<br>\nትጠበቃለህ ትጠበቃለህ ትጠበቃለህ<br>\nበእኔ አጠገብ የፈውሴ ጌታ ኢየሱስ ታልፋለህ<br>\n<br>\nየግድ ነው የአንተ መምጣት የግድ ነው<br>\nቃልኪዳንህ ግድ ብሎህ ነው ምትመጣው<br>\nየግድ ነው የአንተ መምጣት የግድ ነው<br>\nየእኔ ነገር ግድ ብሎህ ነው ምትመጣው<br>\nየግድ ነው የአንተ መምጣት የግድ ነው<br>\nየዘመናት ዕንቆቅልሼን እንድትፈታው<br>\n<br>\nየእኔ ሁኔታ ከቶ አያግድህም [አያስቀርህም]<br>\nየሰው ግፍያ ፈውሴን አያግድም [አያስቀርም]<br>\nደፍሬ በእምነት ልብስህን ዳስሳለሁ<br>\nየሕመሜ ምንጭ ደርቆ እፈውሳለሁ<br>\n<br>\nየእኔ ነገር ግድ ብሎ ያለሁበት ትመጣለህ<br>\nየዘመናት ዕንቆቅልሼን በችሎታህ ትፈታለህ<br>\nተሸክሞኝ የኖረውን አልጋዬንም ልሸከመው<br>\nከአንደበትህ የሚወጣው የሥልጣን ቃልህ እርሱ በቂ ነው<br>\n<br>\nትንሿ እምነቴን አይተህ ከመጣህ<br>\nወደ ጓዳዬ [ጎጆዬ] ኢየሱስ ከገባህ<br>\nዕንቆቅልሼን ሳትፈታው [ያንን ታሪኬን ሳትቀይረው]<br>\nእባክህ አምላኬ አትተወው<br>\n<br>\nሰበብ የለኝም ምክንያት አላውቅም<br>\nየፈውሴ ጌታ ወደ እኔ ስትቀርብ<br>\nቃል ብቻ አውጣና ተናገረው [አንተ እዘዘው]<br>\nየዓመታትን ችግር እንድትፈታው<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l13",
+    "title": "ፊትህ መጥቻለሁ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ፊትህ [ዛሬ] መጥቻለሁ አንተን ፈልጌ<br>\nመጥቻለሁ ክብርህን ናፍቄ |፪ <br>\nእንዳልመለስ በባዶ እኔን አስበኝ <br>\nእንዳልመለስ በከንቱ አቤቱ ማረኝ<br>\n<br>\nከብዙ ሸክም ጋር ወደ አንተ መጥቼ <br>\nባዶ እንዳልመለስ ደጅህ ቆይቼ<br>\nእንደ ቸርነትህ መጠን ማረኝና<br>\nአጽንተህ አቁመኝ ፍትህ እንደገና<br>\n<br>\nያለ ገደብ ያለ ልክ መንፈስህ እንድወርድ<br>\nሰማይ ተከፍቶ ክብርህን እንዳይ አዎ <br>\nእኔን ማረኝ ደዌው እንድፈወስ ዕውሩ<br>\nእንድበራ ታላላቅ ታአምራት እንድሰራ<br>\nአዎ እኔን ማረኝ ማረኝ እያልኩ ጥለህ <br>\nአትሂድ ማረኝ እያልኩ የሱስ ሲልህ <br>\nትተህ አትሂድ የሱስ ሲልህ<br>\n<br>\nበህዝብህ መሃል አንተ እንድሰራ <br>\nሰማይ እንድከፈት ክብርህ እንድያበራ <br>\nአብዝቼ ጮሃለሁ እኔን ማረኝ ብዬ ቶሎ <br>\nእንድያገኘኝ ይቅርታህ ጌታዬ <br>\nያለ ገደብ ያለ ልክ...<br>\n<br>\nከኃጢአቴ ብዛት ምህረትህ ይበልጣል <br>\nፍቅርህ ልዩ ነው በኔ ላይ በርትቷል <br>\nታምኜ ቆምያለሁ በምህረትህ ዛሬ <br>\nትምረኛለህ አሜን አልጠራጠርም ማረኝ እያልኩ ጥለህ አትሂድ<br>\n<br>\nሰማይ ምድርን የሞላህ አንተ ነህ <br>\nእሩቅ አይደለህም ቅርብ ነህ <br>\nየተሰወረ የለም በአንተ ፊት<br>\nእኔንም አይተህኛል የኔ አባት<br>\n<br>\nዛሬ በፊትህ ተንበርክኬ<br>\nዛሬ ከእግሮችህ ስር ወድቄ ዛሬ <br>\nምህረትህን ለምናለሁ ዛሬ ማረኝ እልሃለሁ<br>\n<br>\nማረኝና አቤቱ አድምኝ ማረኝና ኢየሱስ ባርከኝ <br>\nማረኝና እኔንም አስበኝ ምህረትህ በቶሎ ያገኝኝ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l14",
+    "title": "እግዚአብሔርን እንዲህ በሉት",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            እግዚአብሔርን እንዲህ በሉት <br>\nስራ ግሩምና ድንቅ ነዉ <br>\nከሰዉ ልብ አእምሮ እጅግ በላይ ነዉ<br>\n<br>\nየማይመረመረዉን ታላላቅ ነገር ያደርጋል<br>\nበሰዉ ልብ ያልታሰበዉን ታምራትንም ይሰራል<br>\nፍርዱ ትክክል በቅን ነዉ ሀሰት በእርሱ ዘንድ የለም<br>\nበምክሩ ግሩም ጻድቅ ነው ሽንገላን ፍፁም አያዉቅም<br>\n<br>\nሰማያትን በስንዝር የለካ<br>\nዉሆችንም በእፍኙ የሰፈረ<br>\nጨለማዉን በብርሃን ያበራ<br>\nበዚህ አለ ዛሬም ታዐምርን ሊሰራ<br>\n<br>\nይሰራል ከቶ ያልታሰበዉን<br>\nያደርጋል ያልተገመተውን<br>\nሀሳቡ እጅግ ጥልቅ ነዉ<br>\nእግዚአብሔር መለኪያ የለውም<br>\n<br>\nእግዚአብሔር መለኪያ የለውም<br>\nሀሳቡ እጅግ ጥልቅ ነው<br>\nያደርጋል ያልተገመተውን<br>\nይሰራል ከቶ ያልታሰበውን<br>\n<br>\nባህሩን እንደ ግድግዳ ለሁለት ከፍሎ ያቆመ<br>\nማዕበል ወጀብ ነፋሱን በስልጣን ፀጥ ያደረገ<br>\nየሚራመድ በውሃው ላይ የተፈጥሮን ህግ የሚሽር<br>\nቃሉ በከንቱ አይመለስ ሁን ሲል ሁሉ ሚሆንለት<br>\n<br>\nሁሉን ያደርግ ዘንድ ቻይ ነው <br>\nሀሳቡን ማነው ሚመስለው<br>\nሚመስለው ልዩ ነው <br>\n<br>\nአለ እግዚአብሔር ቀንበርን ሊሰብር<br>\nደዌውን ሊፈውስ ሸክምን ሊያራግፍ<br>\nከባድ የተባለው በእርሱ እጅግ ቀላል ነው<br>\nግዙፉ ተራራ ደልዳላ ሜዳ ነው<br>\n<br>\nይሰራል ድንቅ ተዐምር ይሰራል<br>\nያደርጋል ታላቅ ነገርን ያደርጋል<br>\nለእግዚአብሔር ለእርሱ ምን ይሳነዋል<br>\n\n        </p>\n    </div>"
+  },
+      {
+        "id": "l15",
+    "title": "ምስጋናዬ ነህ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            አለኝ አለኝ በልቤ ሙሉ የሆነ ክብር<br>\nአለኝ አለኝ ለሥምህ የድል ምስጋና መዝሙር<br>\nተሻግሬያለሁ ኦሆ በክንድህ ብርታት አሀ<br>\nአወራለሁኝ ቆሜ ያንተን ታምራት <br>\nክብርን ሰጣለሁ ይኸው ላንተ ምስጋና አሀ<br>\nከተባለልህ በላይ ትልቅ ነህና<br>\n<br>\nንብ ማርን እንደሚከብ የከበበኝ ሁሉ<br>\nየታል ተግዳሮቱ አልፋል ማእበሉ<br>\nንብ ማርን እንደሚከብ የከበበኝ ሁሉ <br>\nደግሜ ላላየው አልፏል ማዕበሉ<br>\nበስምህ አሸነፍኩኝ አንተ ተዋግተህ<br>\nእንዲ እልሀለሁ ኢየሱስ ምስጋናዬ ነህ<br>\n<br>\nምስጋናዬ ነህ/2<br>\nከከበበኝ ሁሉ ያመለጥኩብህ<br>\nክንድህን አይቻለሁ ክብርህን አይቻለሁ<br>\nከማመስገን በቀር ሌላ ምን ከፍላለሁ<br>\n<br>\nስለአንተ ሚወራ ስለአንተ ሚነገር<br>\nበልቤ የሞላ አለኝ ብዙ ክብር<br>\nበምሥጋና ቃልም እሰዋልሀለሁ<br>\nየተሳልኩትንም አሜን ስእለቴን ከፍላለሁ<br>\n<br>\nከማወራልህ/2 ከማዜምልህ/2<br>\nከገባኝ በላይ ነህ ከተረዳሁት<br>\nበምን ቃል ልግለጸው የክብርህን ብዛት<br>\n<br>\nአቤት ተሸከምከኝ በማይዝለው ክንድህ<br>\nመሻገር ሆነልኝ አልፌ መሄድ<br>\nሰባሪው ከፊቴ ሰብረህ አልፈሀልና<br>\nአነሳለሁ ይኸው ዛሬም የድሉን ምስጋና<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l16",
+    "title": "እግዚአብሔር ያለፈውን መልሶ ይሸዋል",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            እግዚአብሔር ያለፈውን መልሶ ይሸዋል/2x<br>\nእስኪ ልነሳ ከክብሬ ልዋረድ <br>\nላመስግነው በማንም ሳልገደድ/2x<br>\n<br>\nዘመን ሲለወጥ ዘመን ተክቶ<br>\nአዲስ ሲመጣ አሮጌው ወጥቶ<br>\nበዚህ ሁሉ ውስጥ አየሁ ምህረት <br>\nአጥሮ ከልሎ ሚያቆይ በህይወት/2x<br>\n<br>\nበተከበበ ከተማ የሚያስደንቅ ምህረቱን/2x <br>\nበእኔ የገለጠ እግዚአብሔር ይመስገን/2x<br>\n<br>\nማነው ከእኔ በቀር የሚናገር <br>\nደግነቱን ያየ ሚመሰክር<br>\nበቃልኪዳን ፍቅሩ አጥብቆ<br>\nይዞኛል ምህረቱ ጠብቆ<br>\n<br>\nነፍሴ ለኢየሱስ/2x<br>\nአዲስ ምስጋናን ትሰዋለች<br>\nእልልታን ትሰዋለች<br>\nንጉሱን በውበቱ እያየች ታነግሰዋለች/ታደንቀዋለች<br>\n<br>\nምስጋና ምስጋና ለኢየሱስ ምስጋና<br>\nክብሩ ለገነነ መንግስቱ ለጸና<br>\nኑ ለእርሱ እንስገድ እየሱስ ትልቅ ነው ክብሩ ከሰማያት በላይ ነው/2<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l17",
+    "title": "እስቲ ልዘምረው",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ከፊት ከኋላዬ ከብቦኛል እንዳልወድቅ አፅንቶ ይዞኛል<br>\nቀና ብዬ መሄድ እንድችል ምሕረትህ ሆኖኛል ምርኩዝ<br>\nበፊትህ መቆሜ በፅድቄ አይደለም በፍፁም በራሴ<br>\nበምሕረትህ እንጂ ታግዤ ኢየሱስ በፊትህ መቆሜ<br>\n<br>\n  እስቲ ልዘምረው ምሕረትህን<br>\n  እኔስ ላስታውሰው ምሕረትህን<br>\n  ደግሜ ደግሜ ምሕረትህን<br>\n  ልናገር ላውራው ምሕረትህን<br>\n<br>\nእንዲህ በነጻነት እንዳመልክህ<br>\nእስሬ ተፈታልኝ በምሕረትህ<br>\nመሻገርያ ድልድይ ሆኖልኝ<br>\nተሻገርኩኝ ቀናት ዓመታትን<br>\n<br>\nተባረክ ተባረክ ተባረክ<br>\nተባረክ ለዘለዓለም ተባረክ<br>\nተባረክ ዕልፍ ጊዜ ተባረክ<br>\nተባረክ የእኔ ኢየሱስ ተባረክ<br>\n  <br>\nበከሳሼ ድንጋይ መወገር መሞት የእኔ ዕጣዬ ነበር<br>\nብርቱ በሆነው ምሕረትህ ለእኔ ታላቅ ሥራ ሠራህ<br>\nየኃጢአቴን ብዛት ረስተህ ያለፈውን ሁሉ ትተህ<br>\nበከሳሾቼ ፊት ህይወትን አወጅክልኝ ሰላም ምሕረትን<br>\n<br>\nቸር ነውና ምህረቱ ለዘለዓለም ነውና<br>\nእግዚአብሔር ይመስገን <br>\nቃልኪዳኑን ለፍጥረት አጽንቶ ጠብቋልና<br>\nእግዚአብሔር ይመስገን <br>\n<br>\nአመሠግነዋለሁ <br>\nምስጋናውን ሥራውን ለፍጥረት አወራለሁ<br>\nአመሠግነዋለሁ <br>\nበቅኖቹ ማኅበር እዘምርለታለሁ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l18",
+    "title": "ዘመኔ በከንቱ አይለቅ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ዘመኔ በከንቱ አይለቅ ጌታዬ<br>\nአመታቴ ለክብርህ ይሁኑ ሁሌ *2<br>\n<br>\nከኖርኩ አይቀር ልኑር ለክብርህ<br>\nእያየሁ በቤትህ ማዳንህን<br>\nከኖርኩ አይቀር ይሁን ለክብርህ<br>\nእያየሁ በቤትህ ማዳንህን<br>\n<br>\nልስማ ላገልግልህ እንደ አባቶቼ<br>\nአይለቅ በከንቱ ኢየሱስ ዘመኔ<br>\nአሳብህን ላገልግል ሆኜ እንደምትሻው<br>\nዘመኔ በልማት ይለቅ ፈፅመው<br>\n<br>\nዘመኔ በከንቱ...<br>\n<br>\nከዘመናት በፊት በእኔ ልትሰራ<br>\nያዘጋጀህውን የአንተን አላማ<br>\nፍቃድህን ፈፅሜ ደስ እንዳሰኝህ<br>\nፀጋህ ይፍሰስልኝ ያግዘኝ መንፈስህ<br>\n<br>\nከኖርክ አይቀር...<br>\n<br>\nዳዊት ሀሳብህን እንዳገለገለ<br>\nየልቤን ሰው ይህው አገኘው እንዳልከው<br>\nእኔም በዘመኔ ላስከብር ስምህን<br>\nተጠቀም በህይወቴ ፈፅም አላማህን<br>\n<br>\nከኖርኩ አይቀር<br>\n<br>\nአይለቅ ዘመኔ በከንቱ <br>\nአይለቅ ዕድማዬ በከንቱ<br>\nይለፍ አስከብሬህ<br>\nይለፍ አገልግዬህ<br>\nይለፍ በዘመኔ<br>\nፍቃድህን ፈፅሜ(አምላኬ የአንተን ሀሳብ አገልግዬ)<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l19",
+    "title": "እንደአንተ ያለ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            እንደአንተ ያለ *2 <br>\nእንደአንተ ያለ ማን አለ እንደአንተ ያለ <br>\n<br>\nሳይወዱት ሚወድ <br>\nፍቅሩ ማይቀዘቅዝ <br>\nጌታዬ እንደአንተ ያለ ማን አለ<br>\n<br>\nእየሱስ *3<br>\nለነፍሴ ሰላም እየሱስ<br>\nለህይወቴ እረፍት እየሱስ<br>\nለእኔ መልካም እየሱስ<br>\n<br>\nለጭንቄ እረፍት በአንተ ጌታ አገኘሁኝ<br>\nያጎበጠኝን አንተ እየሱስ ገላገልከኝ<br>\nእፎይ አልኩኝ በአንተ ጌታ<br>\nያቃተኝን እንቆቅልሼን ስትፈታ<br>\n<br>\nአንተ የኔ እኔም የአንተ ሆኛለው<br>\nበልቤ ዙፋን አንተን ብቻ ሾሜሀለው<br>\nበቃ ከእንግዲ እኔ አልፈራም <br>\nአለህልኝ ሁሌ ከጎኔ ከእኔ ጋራ<br>\n<br>\nፍቅርህ ሀያል ነው <br>\nእስከመስቀል ሞት ነፍስህን ሰጠህ<br>\nደካማ ሳለው የኔ ጌታ እኔን ወደድክ<br>\nሳይወዱት ሚወድ እንደአንተ ሚሆን<br>\nእኔ አላገኝም ውዴ ኢየሱስ\nሚተካህ አንተን<br>\n<br>\nአጥብቄ ከማንም በላይ ወድሀለው<br>\nተማርኬ በፍቅርህ ገመድ ታስሬአለው<br>\nአልፈላልግም ከአንተ ሌላ <br>\nምርጫዬ ነህ የምወድህ የኔ ጌታ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l20",
+    "title": "ጥሶ የሚያስጉዝ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ጥሶ የሚያስጉዝ ሀይል<br>\nልቤ ይናፍቃል<br>\nሰማያት ይከፈቱ <br>\nይውረድ እጥፍ እሳቱ<br>\n<br>\nየረከሰው እንዲፈወስ<br>\nእጥፍ ይውረድ ያንተ መንፈስ<br>\nተቀብለን ፀጋ ሚበልጥ<br>\nእንውጣ ሀይልህም ይገለጥ<br>\n<br>\n1)ቀንበርን የሚሰብር <br>\nሃጥያትን የሚያስጥል(የሚያስክድ)<br>\nላንተ መኖር የሚያስችል<br>\nሀይልህ እጥፍ ይውረድ<br>\n<br>\nእንለይ ላንተ ክብር<br>\nእንቀመም በእሳት<br>\nጠላትን እያስፈራን <br>\nእንኑር የክብር ህይወት<br>\n<br>\n2)ጥቂት ዘመን እንዳለው ጠላት ይህንን አውቆ<br>\nበታላቅ ቁጣ ቢወርድ ቢነሳ እጅግ ታጥቆ<br>\nሁሉን የሚበልጥ ፀጋ ማሸንፍያ ቅባት<br>\nይውረድ ታላቁ መብረቅ የመንፈስህ እሳት<br>\n<br>\nጠላት ይፍራ ይደንግጥ<br>\nአይቶ እንዳለን በእሳት ውስጥ<br>\nየድል ህይወት የድል መንገድ<br>\nእንድንጓዝ ሀይልህ ይውረድ<br>\n<br>\nይውረድ እሳትህ ይውረድ *3<br>\nይውረድ መንፈስህ ይውረድ *3<br>\n<br>\n3) ቅዱስ ስምህ ይጠራ ፈውስ ይሁን ታምራት<br>\n   ጠላታችን ይንቀጥቀጥ ይርበድበድ ባንተ ፉት<br>\n  በስምህ ከጠራህው ከታላቅ ህዝብ ጋር<br>\n  ውጣ የኛ አምላክ የሱስ ልዩነት ይፈጠር<br>\n<br>\nጠላት ይፍራ....<br>\n4) ዛሬም ቅዱስ መንፈስ በብርቱ እንፈልጋለን<br>\nያልተለማመድነውን  ፀጋ ይዞ ይምጣልን<br>\nሰማያት ይከፈቱ ድንቁ ክብር ይታይ(ሙሉ)<br>\nፍጥረት ወድቀው ይስገዱ ንገስ በሁሉ ላይ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l21",
+    "title": "እጣዬ አማረ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ኢየሱስ አምላክ ነው በእውነት<br>\nለእኔም በራልኝ አየሁት<br>\nጨለማው ሆነ እንደ ቀትር<br>\nነፍሴ ደመቀች በእርሱ ክብር<br>\n<br>\nእጣዬ አማረ ሆ |፪<br>\n<br>\nገመድ ወደቀች በአማረ ስፍራ<br>\nነፍሴ ለኢየሱስ ይሄው መዝሙሯ<br>\n<br>\n፩| በጥፋቱ ውሃ እንዳልወሰድ እንዳልጠፋ<br>\nመድኀኒቴ ኢየሱስ እጄን ያዘኝ እንዳልወድቅ<br>\nማረኝ ስለው ማረኝ አይኖቼን አበራ<br>\nዛሬ በህይወቴ ታምራት ተሠራ<br>\n<br>\nእጣዬ አማረ ሆ...<br>\n<br>\n፪| በገዛ ፈቃዱ አስጠጋኝ ወደደኝ ጌታዬ<br>\nበሰማዩ ስፍራ አስቀመጠኝ አማረ ዕጣዬ<br>\nልግባ ወደ ቤቱ በፍቱ እየሰገድኩ<br>\nስገዛለት ልኑር ሁሌ እየተደነቅኩ<br>\n<br>\nእጣዬ አማሬ ሆ...<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l22",
+    "title": "አይዟችሁ ጽኑ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            አይዟችሁ ጽኑ በርቱ በእግዚአብሔር<br>\nልባችሁ አይውደቅ ከቶ አይሸበር<br>\n<br>\nተስፋን የሰጠው የታመነ ነው<br>\nእስከ ጽዮንም ሚሸከመን ነው <br>\nከቶ አንፈራም በሚሆነው <br>\nየእኛ መድረሻ እላይ ሰማይ ነው<br>\n<br>\nከቶ አንቀርም በምድረ በዳ <br>\nየጠላት ሀሳብ ከቶ አይሳካ<br>\nዓይኑ እያያ እንወርሳለን<br>\nየማያሳፍር ቃልኪዳን አለን<br>\n<br>\nወራሽ ሕዝብ ነን የማንረገም<br>\nለጠላት ሀሳብ ከቶ አንመችም<br>\nገና እየበዛን እንሄዳለን<br>\nየማይናወጥ ቃልኪዳን አለን<br>\n<br>\nባህር ተከፍሎ በደረቅ ምድር ተሻግረን<br>\nጠላታችንም በጥልቁ ተቀብሮ እያየን<br>\nበቀና መንገድ ከፊት ሆኖ እየመራን <br>\nየምን መሸበር ምንወርሰው ሃገር አለን<br>\n<br>\nባህሩ ታዞ ለቃልኪዳኑ እንደ ግድግዳ ከቆመ<br>\nእርሱ ተናግሮ ከአፉ ቃል ወጥቶ የማይፈጽመው ምን አለ<br>\nአወርሳለሁኝ ብሎ በራሱ ፍጹም ላይተወን ምሎአል<br>\nሰማይ ልንደርስ [ልንገባ] ከፊታችን ጥቂት ጉዞ ይቀራል<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l23",
+    "title": "ወደ አንተ መጣለው",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ማልጄ በጥዋት ወደ አንተ መጣለው<br>\nከሁሉም ቀድሜ ፊትህ እገኛለው<br>\nአለ እና በዉስጤ እጅግ ብዙ ሸክም<br>\nእስክታብስ እንባዬን ከደጅህ አልርቅም<br>\n<br>\n   ኢየሱሴ ሆይ ወደ እኔ ዘንበል እስክትልልኝ<br>\n   ዝም አልልም ከቶ እስክትመልስልኝ<br>\n   ዛሬ ይሁን እና ጉብኝት ለእኔ <br>\n   እንባዬን አብሰው ይለወጥ ሕይወቴ<br>\n<br>\n1)ስብራትን የምትጠግን አንተ የምታቀና<br>\n    እንቆቅልሽን ፈቺ ቀርበህ ምታፅናና<br>\n    አለኝና ሸክም ለእኔም የከበደ<br>\n    ለብዙ አመታት ከላዬ ያልወረደ<br>\n    <br>\nአልሂድ ተመልሼ ከነእንቆቅልሼ<br>\nአልሂድ ተመልሼ ጥያቄዬን ይዤ <br>\nማን ሄደ በባዶ ሸክሙ ሳይወርድለት<br>\nፊትህ ወድቆ በምልጃ በፀሎት<br>\n<br>\n2)ልመናዬ በዝቶ አንደበቴ ቢዘጋ<br>\n   በልቤ እያወራሁ ቢያዩኝ ሰዎች ካንተ ጋ<br>\n   ልቤ ያዘነብኝ ነፍሴ የፈሰሰች ጌታዋን ፍለጋ<br>\n   ሰክሬ እኮ አይደለም አንተን መሻቴ ነው ፊትህ ስጠጋ<br>\n   <br>\nይሁንልኝ ኢየሱሴ አንተ እንዳልከው <br>\nበባሪያህም በኩል እንደተናገርከው<br>\nእንደተመለሰላት ፀሎት ልመናዋ <br>\nይብራልኝ ፊቴ ፈክቶ በደስታ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l24",
+    "title": "አልሄድም",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            አልሄድም የትም ከአንቴ እርቄ<br>\nየህይወት ቃልን ተለይቼ<br>\nየለም መሄጃ [ማምለጫ]<br>\nከአንተ ተርቆ አይቻልም ኑሮ<br>\n<br>\nያሳደገኝ ያስተማረን<br>\nቃልህን ነው የባረከኝ<br>\nለህይወቴ እረፍት ሆኖ<br>\nአቁሞኛል ተሸክሞ<br>\n<br>\nአይዞህ ባይ ስጠፋ የምሆን ከጎኔ<br>\nአንተነህ ሁል ጊዜ የማትለይ ከኔ<br>\nይከብዳል መኖር ተለይቶ<br>\nይከብዳል መኖር ካንተ ሪቆ [አንተን ትቶ]<br>\n<br>\nምርጫዬ ነህ የኔ ጌታ <br>\nአልፈልግም ካንተ ሌላ<br>\nለዘላለም መኖርያዬ<br>\nአንተው ነህ ማረፊያዬ<br>\n<br>\nመኖርን እሻለሁ እኔ ካንተ ጋራ<br>\nብመች ባይመችም በእቅፍ አለኝ ቦታ<br>\n<br>\nአይመች ጉዞ ተለይቶ<br>\nአይመች ጉዞ ከአንተ ሪቆ<br>\n<br>\nየለም መሄጃ...<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l25",
+    "title": "አደራ አለብኝ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            እንዴት ይሆን ለኔ የተሰጠኝ አደራ<br>\nአስብ ይሆን የመከሩን ስራ<br>\nላሳርፍ ነው ወይስ ላሳፍራቸው<br>\nይህን እውነት የሚረከባቸው <br>\n<br>\nአደራ አለብኝ የሚረከባቸው<br>\nአደራ አለብኝ ብዙ የምሰራው<br>\nአደራ አለብኝ ወንጌሉን ለዓለም<br>\nአደራ አለብኝ እንድን መሰክርው<br>\n<br>\nአለብኝ አደራ የተሰጠኝ ከአባቶቼ<br>\nወንጌሉን ለመመስከር ነብሳትን ለማዳን<br>\nእቆማለሁ ዛሬ እውነቱን ታጥቀ<br>\nእናገራለሁ ከሐሰት ቀድሜ<br>\n<br>\nእኔ አለሁ ለእውነቱ [ለወንጌሉ]<br>\nሳልደክም በየእለቱ<br>\n<br>\nአወራለሁ እኔ የወንጌሉን ሀይል<br>\nኢየሱስ ብቻውን ጌታ ነው እላለሁ<br>\nለዓለም ልናገር ትውልድ ይዳንበት<br>\nየመንግስቱ ተስፋ ወራሽ ይሁንበት<br>\n<br>\nበአባቶች መንፈስ ተይዘን<br>\nበኢየሱስ ሀይል ተሞልተን<br>\nበእውነት ወንጌል ተጫምተን<br>\nለዓለም እንድረስ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l26",
+    "title": "በአንተ ተሻግርያለሁ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            አንተ የእኔ ድንቅ ኢየሱስ<br>\nአንተ የእኔ ድንቅ የእኔ ጌታ<br>\nምን ይዤ ፊትህ እመጣለሁ<br>\nልቅረብህ በብዙ እልልታ<br>\n<br>\nበአንተ ተሻግርያለሁ በአንተ ሁሉን እረስቻለሁ<br>\nበአንተ በመድሃኒቴ ስምህ ፈውሴ ሆኖኝ ድኛለሁ <br>\n<br>\n፩| የማይታለፈው አለፈ ማይረሳ ሚመስለው ፈተና<br>\nኢየሱሴ አንተ መልካም ነህ ነገር ቢጎድል ቢሞላ<br>\nምላሽ ብዬ ያመጣሁልህ እንዲያው ለአንተ መች ይበቃሃል<br>\nስለሁሉም ስምህ ይባረክ ለምስጋና አቁመኸኛል<br>\n<br>\nበአንተ ተሻግርያለሁ...<br>\n<br>\n፪| በእልፍኜ ውስጥ የለመንኩህ ያለቀስኩት በጓዳዬ<br>\nቀርበህ አድምጠሃል ፀሎቴን አብሰሃል ከአይኔ እንባዬን<br>\nአንተ ለእኔ መልካም አባት ነህ ደግሞ ነህ ከአባት በላይ<br>\nአለኝ ምለውን ሁሉን ውሰድ በማደሪያህ ከብረህ ታይ<br>\n<br>\nአንድ በአንድ ብዬ ብቆጥር አያልቅም ለእኔ ያረከው<br>\nከቃሌ እንባዬ እየቀደመ ብናገር አንተ የሰራኸውን<br>\nሰባራውን ልቤን ጠግነህ መፅናናትህን በእኔ ሞልተሃል<br>\nላመስግንህ ኢየሱስዬ ብዘምር ብዘምር ያንስሃል <br>\n<br>\nከፍ በልልኝ|፪<br>\nኢየሱስዬ ከአማልክት ሁሉ ልቀህ ታይልኝ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l27",
+    "title": "ብዘምረው",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ብዘምረው ብዘምረው የማይሰለቸኝ<br>\nፍቅሩ እያደር የሚጨምር ኢየሱስዬ ነው<br>\nከትላንቱ ፍለጋዬ እጅጉን በረታሁ<br>\nአልጠገብኩም እንደገና ዘምሪ ያሰኘኛል<br>\n<br>\nአልችልበትም እኔማ<br>\nአይሆንልኝም እኔማ<br>\nሳልዘምር ውሎ ማደር ስሙን ሳላነሳ<br>\n<br>\n፩| ጠዋት ላይ አንስቼ ቀትርም ይርበኛል<br>\nቀትር ላይ ደሞ መች ዝም ያሰኘኛል<br>\nበሌሊት ከእንቅልፌ ማለዳ ስነቃ<br>\nዘምሪ ያሰኘኛል ፍቅሩ እየመጣ<br>\n<br>\nአልችልበትም...<br>\n<br>\nስሙ መመክያዬ ነው<br>\nስሙ መዳኛዬ [ማምለጫዬ] ነው<br>\nኢየሱስ የሚለው |፬<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l28",
+    "title": "ልቤ አንተን",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            እግዚአብሔር መንፈስ የሚመለከው በመንፈስ<br>\nበስጋ ጩኸት ሩጫ መች ዙፋኑ ሊደርስ<br> \nየሰውን ሁለንተና ፍቃድ የሚመረምር<br>\nየቅኖች አምላክ እርሱ ቅዱስ ነው እግዚአብሔር <br>\n<br>\nከሰበሰብከው ጉባዔ ከጠራኸው ህዝብ መሃል <br>\nልቡ ወደ አንተ የቀናውን አውቃለሁ አንተ እንደምታይ<br>\nየሰውን የልብ ሀሳብ ትኩረቱን የምትሻ<br>\nከመጣሁኝ አይቀር ይሁን ክብርህ ለእኔ መዳረሻ <br>\n<br>\nክብርህን ሳላይ አልመለስ<br>\nከመንፈስህ ጠል ሳልረሰርስ <br>\nአንዳች ምስጢር ሳትገልጥልኝ <br>\nካለሁበት ስፍራ ሳታስጠጋኝ <br>\n<br>\nአንተን ሊያይህ ፈልጎ ፈጥኖ ዛፍ ላይ የወጣውን<br>\nእንዲሁ አይተህ እንዳላየህ ችላ ብለህ መች አለፍከው<br> \nከሚጋፉት ሰዎች መሃል የዘኪዎስ ልብ አንተን ጠራ<br>\nዞር ብለህ ስታየው ተቀየረ የእርሱ ስፍራ <br>\n<br>\nአንተን ሳላይ አልመለስ<br>\nድምፅህን ልስማው ተናገረኝ <br>\nና እና ቤቴ ውለህ እደር<br>\nየእኔም ታሪክ እስኪቀየር <br>\n<br>\nልቤ አንተን አንተን ይላል<br>\nመገኘትህን ይናፍቃል <br>\nካልባረከኝ አልለቅህም <br>\nለእኔ ከአንተ ሌላ አላውቅም<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l29",
+    "title": "አባት ልጁን",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            አባት ልጁን ይወዳል /2*/<br>\nየየሱስ ግን ይለያል /2*/<br>\n<br>\n     አባት /3*/አለኝ ለኔ አባት <br>\n   መታመኛ ለሕይወቴ የሱስ ነው<br>\n  የሚያስፈራኝ ማነው  /2*/<br>\n<br>\n1, አባትና እናት ይረሱ ይሆናል <br>\nሰው እንደወደደው እንዲሁ ይጠላል<br>\nጌታ ግን መች ተወኝ ተቀበለኝ<br>\nከነ አጥያቴ እርሱ ወደደኝ<br>\n<br>\nሰው ከማይወደው ከውርደት ቦታ<br>\nአባ አንስቶኛል ከዝቅታ<br>\nትቢያዬን ከላዬ አመዴን አራግፎ <br>\nየሱስ ሰው አድርጎኛል ሳይንቀኝ ቀርቦ<br>\n<br>\n2, ፍቅር ሀያል ነው ብለው ቢተርኩ<br>\nየወላጅነትን ፍቅር ቢያለካኩ<br>\nአላወቁም ለካ የኔን ደግ አባቴን <br>\nነፍሱን የሰዋልኝ ሳይንቅ ማንነቴን <br>\n<br>\nያለምክንያት እንዲሁ ወደደኝ<br>\nከአባት በላይ አባትም ሆነልኝ <br>\nውርደት የምድር ስቃይ ሁሉ አልቀረውም<br> \nአባ ለእኔ ሲል ነፍሱን አልሰሰተም<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l30",
+    "title": "ጌትነትህ ይግዛኝ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ጌትነትህ ይግዛኝ/2*<br>\nባርያነትም ይግባኝ/2*<br>\n<br>\nላንተ መንግት ሰራተኛ <br>\nቀን ለት የማተኛ<br>\nወደ ላከኝም የምሃድ<br>\nታዛዥ መልክትኛ<br>\n<br>\nየምሆንበትን ኃይልን ልቀቅልኝ<br>\nየምሮጥበትን ፀጋ አትረፈርፈልኝ<br>\nአንተን ዘወትር በእኔ ከብረህ እጅግ በጣም ልቀህ<br>\nእድታይ ኢየሱሰ በመንፈስ አግዘኝ<br>\n<br>\nክብርህን እንዳልሻማ <br>\nፍጹም እንዳልነካ<br>\nልለይልህ ኢየሱሴ<br>\nሆኘ ታማኝ ባርያ <br>\n<br>\nቦታየን ስፍራየን አውቀ<br>\nላገልግል በቤትህ<br>\nፀጋህ እንድበዛ በእኔ <br>\nለሥራ እንድ ፈጽም<br>\nክብርን ለአንተ እየሰጠው<br>\nነፍሰን ላንተ ላፈስስ<br>\nከማሸተው አንዳች ሳይኖር<br>\nይሃው ላንተ የሱስ<br>\n\n   በትዕብት እንዳልሞላ<br>\n   አንተን እዳልገፋ<br>\n   ድንዛዜ እንዳይዘኝ<br>\n   አበቱ አድነኝ<br>\n<br>\nትህትናን አልብሰኝ<br>\nፀጋህም ስጠኝ<br>\nጌትነትህ ይግዛኝ<br>\nባርያነተም ይግባኝ<br>\n<br>\nቆይታየም እንድፀና<br>\nየሱስ በአንቴ መንግስት<br>\nዘወትር እየገጸጽከኝ<br>\nላገልግል በአንተ ፍት<br>\nመንገዴን ልፈትን በቃልህ ብርሃን <br>\nከአመጻ እያየሁ ክብርህን<br>\nያልደረስኩበትን የመንፈስ ከፍታ<br>\nልኑረው ያን ህይወት ሆኘልህ ባሪያ<br>\n<br>\nይግባኝ ገትነትህ በመንፈስ ልረዳ<br>\nይታወቀኝ ኃይልህ ከፍ ብዬ ልዬው<br>\nልረዳው ግርማህን በልቤ ፈልገ<br>\nክብርህን አይቼ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l31",
+    "title": "መፈክር ነው ሰንደቄ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ዘመን መጣ እውነቱ አበራ<br>\nየፅድቅ ፀሀይ በአደባባይ ወጣ<br>\nታላቅ ሚስጥር ይህው ተገለጠ<br>\nየእግዛብሄር ልጅ የሱስ ማንነቱ ታወቀ<br>\n<br>\nየእውነት መዳኛ እርሱን ማወቅ<br>\nመች አየው ነበር ይሄን መዳኛ<br>\nከፀሀይ መውጫ እስከ መጥለቂያ <br>\nወንጌሉ ይነዳል በልቤ ጉያ<br>\nሰልፉ በላዬ ከፊቴ ተፅፏል<br>\nመዝሙር ስብከቴ እየሱስ ይላል<br>\n<br>\nአዘመረኝ*2<br>\nበለሊቱ ዝማሬን ጨመረብኝ<br>\nበቃ ላውጣ የዜማ እቃ<br>\nተራው ደርሶኝ ዝም አልልም እኔስ ለጌታ<br>\nአናገረኝ*2<br>\nአንሳዳጁ እኔን ብሎ ሲከብድብኝ<br>\nበአደባባይ በሰልፉ ልውጣ<br>\nድሉ ደርሶኝ ዝም አልልም እኔስ ለጌታ<br>\n<br>\nለኔ አኪሊሌ(ክብሬ) ነው አሀሀሀ<br>\nለሱ መዘመር ኦሆሆሆ(እሱን ማገልገል)<br>\nበኩር ከሆነው መርጬ <br>\nልሰዋ ለየሱሴ (ለጌታዬ)<br>\n<br>\nሰለፍ አለብኝ ልጠብቅ የእውነትን አደራ<br>\nድርድር አላውቅም ሲተካ አምላኬ (እየሱስ) በሌላ<br>\nለብቻው በቂ ነው ህይወትና መንገድ የሱስ ነው<br>\nያህዛብ አማልክት መች በቁ ቢበዛ ቁጥራቸው<br>\n<br>\nእኔ እና ቤቴ<br>\nበልቤ ሾምኩት አንዱ የሱሴን <br>\nሁሉ ከእርሱ የእርሱ የሆነ<br>\n<br>\nየእውነት መዳኛ<br>\n<br>\nመፈክር ነው ሰንደቄ<br>\nበእጄ ምይዘው ሰቅዬ <br>\nበሰልፉ መሀል ስጠየቅ <br>\nየማሳየው በድፍረት<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l32",
+    "title": "በቀረልኝ እድሜ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ከሩቅ አይን ይስባል እጅግ ያስጎመጃል<br> \n   ቀረበው ቢፈልጉ አንዳች ፍሬ ታጥቷል <br>\nቅጠሉን ያየ ሰው ተስፋ የሚያደርገው <br>\nብዙ የሚበላ በለስ እንዳለው ነዉ <br>\nመዝሙሩን ያየ ሰው ተስፋ የሚያደርገው<br>\nብዙ መልካም ፍሬ በእርሱ እንዳለው ነዉ<br>\nስብከቱን ያየ ሰው ተስፋ የሚያደርገው<br>\nለትውልድ የሚበቃ ህይወት እንዳለው ነው<br>\n<br>\nአጥተህብኝ አትመለስ ፍሬ በኔ ይኑር<br>\nየሚበላ ከኔ አይታጣ ከአንተ ጋር ልቅር መዝሙርን /ዜማ/<br>\nብቻውን አያኖርም ህይወትን እሻለው<br>\nስብከት ቢሆን ብዙ አያስገርምም ሚሉትን መኖር ይቀድማል<br> \n<br>\nበቀረልኝ እድሜ ሌላውን ደብቅና<br>\nአንተን አሳያለው የህይወቴ ዋና<br>\nበጨመርከው ዕድሜ ሌላውን እንቅና<br> \nለአንተ እኖራለሁ ለህይወቴ ዋና<br>\nበወደድከው ዕድሜ ሁሉን እተውና<br>\n አንተን አደምቃለሁ የህይወቴ ዋና<br>\nበወደድከው ዕድሜ ሁሉን እተውና<br>\nወደ አንተ እሮጣለሁ ወደ ህይወቴ ዋና<br>\n<br>\n1)ከህይወቴ ሚበላ ፈልገህ <br>\nአትጣ ከልቤ ውስጥ ገብተህ<br>\nከእኛ ቤት ሚወሰድ ፈልገህ<br>\nአትጣ ከደጃፍ ደርሰህ<br>\n<br>\nበቀረልኝ እድሜ...<br>\n<br>\nአልሁን ቅጠል ብቻ /2×/<br>\nሚበላ የሌለበት ደረቅ እንጨት ብቻ<br>\nአልሁን መዝሙር ብቻ/2×/<br>\nኢየሱስ የሌለበት እንዲሁ ዜማ ብቻ<br>\nአልሁን ስብከት ብቻ/2×/<br>\nመንፈስ ቅዱስ የሌለበት እንዲሁ ጩኸት ብቻ<br>\n<br>\n\nይበሉኝ ንግግሩ ኢየሱስ ኢየሱስ ይሸታል<br>\nይበሉኝ አካሄዱ መምህሩን ይመስላል <br>\nይበሉኝ የእርሱ ህይወት ኢየሱስን ይገልጣል<br> \nይበሉኝ በሄደበት/በዋለበት አምላኩን /አባቱን/ ያሳያል<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l33",
+    "title": "አማራጭ የለኝ ከአንተ ሌላ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            መንፈስህ ርቆ እንዴት ይሳቃል<br>\nጠረንህ ጠፍቶ በልማድ እንዴት ይኖራል <br>\nዘይቴ አልቆ እንዴት ይተኛል <br>\nሙሽራው መጥቶ መቅበዝበዝ የት ያደርሰኛል <br>\n<br>\nእጄን ያዝ እልሃለሁ <br>\nድካሜን አውቃለሁ <br>\nያለአንተ አልችልም <br>\nመሄጃም የለኝም <br>\n<br>\nአማራጭ የለኝ ከአንተ ሌላ አማራጭ የለኝ<br>\nህይወትም የለኝ ከአንተ ሌላ ህይወትም የለኝ<br>\nመንገድም የለኝ ከአንተ ሌላ መንገድም የለኝ<br>\nእውነትም የለኝ ከአንተ ሌላ እውነትም የለኝ ከአንተ<br>\n<br>\nደመናው ይሙላው ቤቱን ይውረድ ያንተ መንፈስ<br>\nየኃላኛው ዝናብ መብረቅ አውሎ ንፋስ<br>\nየቤቱ መሰረት ይናወጥ በታላቅ ድምፅ<br>\nየፍጥረት ናፍቆት ነን ያሀይልህ ዛሬም ይውረድ<br>\n<br>\nሰማይ ይከፍት ይውረድ መንፈስህ<br>\nእሳት የሚያጠራኝ የሚቀድስ<br>\nአልሄድም ሳትጎበኘኝ ሳትነካኝ<br>\nአልሄድም ሳትዳስሰኝ ሳትሞላኝ<br>\n<br>\n1) ይህ ለስሜ(ለክብሬ) ብዬ ካንተ ያስበለጥኩት<br>\nምንድነው ጌታዬ ካንተ ያስቀደምኩት<br>\nተቆጥተህብኝ ፈቀቅ እንዳትል<br>\nልቤን ለውጥና በኔ ደስ ይበልህ<br>\n<br>\nአረስርስ በመንፈስህ ልቤን ስበር<br>\nአላቀኝ ካለሁበት ከአለም ድንበር<br>\nአንሳፈኝ በደመናው አረማምደኝ<br>\nይታየኝ የጎልጎታው ክብር ይንካኝ<br>\n<br>\n2) ለብ ባልኩበት ሳላይ ያንተን ክብር<br>\nበኃጥያት ፀንቼ እስከመች ልኑር<br>\nሰልችቶኛል በቃ አንተን ማሳዘን<br>\nልቤ ካንተ ርቆ በአፌ ማመስገን<br>\n<br>\nይብቃኝ ይሄን ህይወት ከእኔ አርቅ<br>\nአልፈልግ ዛሬ ቆሞ ነገ መውደቅ<br>\nአደራ ከንቱ ሰው አታድርገኝ <br>\nለክብርህ ሳልኖርልህ አትግደለኝ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l34",
+    "title": "ዛሬ የመዳኔ ቀን ነው",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ይኳኳል በሬ 3x<br>\nየመጎብኘቴ ቀኔ ነው ዛሬ<br>\n<br>\nዛሬ የመዳኔ ቀን ነው ዛሬ<br>\nዛሬ የምህረቴ ቀን ነው ዛሬ<br>\nዛሬ ዛሬ የመዳኔ ቀን ዛሬ2x<br>\n\nዛሬ የመጎብኘት ቀን ነው ዛሬ<br>\nዛሬ የመታየት ቀን ነው ዛሬ<br>\nዛሬ ዛሬ የመዳኔ ቀን ነው ዛሬ2x<br>\n<br>\n\n1/ የተወደደቺው አሁን ነው ሰአቱ<br>\nሆሳዕና እያልኩ ላፈስ ልቤን ፊቱ<br>\nየምጎበኝበት ዛሬ የእኔ ቀን ነው<br>\nካልባረከኝ የሱስ አለቅህም ልለው<br>\n<br>\nቤቱን ደመና ሲሞላው<br>\nየአምላኬ ክብር ጸዳል<br>\nጨለማዬም ይበራል <br>\nሸክሜም ይወድቃል 2x<br>\n<br>\n2/የሱስ በመንፈሱ በሚገኝበት<br>\nቀርቦ ህዝቡን ሀሉ በሚያጽናናበት<br>\nእግሮቼ ቆመዋል በከበረው ስፍራ<br>\nየምጎበኝበት ዛሬ ነው የእኔ ተራ<br>\n<br>\nያልፋል 2x የናዝሬቱ የሱስ<br>\nያልፋል 2x አይኖቼን ያበራል<br>\nያልፋል ×2 አሁን በዚህ ያልፋል<br>\nያልፋል 2x ክብሩ ያገኘኛል<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l35",
+    "title": "Guyyaan borii",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            Guyyaan borii anaaf kan koo miti inni<br>\nWaaqa koof hojjachuuf ammaa naaf yeroon<br>\nBooddee koo hin ilaalu lamuu galagalee<br>\nHamman du’utti nan obsaa kan ta’e ta’ullee *2<br>\n<br>\n1. Argadhus yoon dhabes ani Yesuus koo hin dhiisu<br>\nBooddee koo ilaalee isaa hin gaddisiisuu<br>\nNan deema hamman du’utti fuula koo durattii<br>\nIsaaf jedhee du’uun koo anaaf bu’a kooti *2<br>\n<br>\n\n2. Hamma du’aatti Yesuus naaf jedhee dhiphate<br>\nDu’a naaf qophaaye ofiisaatti fudhate<br>\nDhiigaan bitameera ani gatiin narra jiraa<br>\nSodaadhe yoon cal jedhe akkan du’u bareera *2<br>\n<br>\n\n3. Dukkana keessaatii garaa ifa isaatti<br>\nKan inni na waameef akkan taa’uuf miti<br>\nYesuus fayyisaa kootiif ani kakuu galeera<br>\nBu’a irra buusuudhaaf maklitii fuudheera *2<br>\n<br>\n\n4. Fannoo koo badhadhee yoo isa duukaa hin buunee<br>\nOfumaan rakkadhe homaa isa hin amannee<br>\nFannoo koo yennaan baadhe hamman aarfamutti<br>\nDhugumaan ani nan gala biyya Waaqa kootti *2<br>\nBiyya lafa hundumaa yennaa nan buufadhe<br>\nQabeenyaa lafaa irra ija koo yennaan keeyyadhe<br>\nBu’aa maal naa qaba hundinuu <br>\nQabeenyaa in dabarree Yesuusinan qaba *2<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l36",
+    "title": "የኔ ቀን ነገ አይደለም",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            የኔ ቀን ነገ አይደለም<br>\nአምላኬን ለማገልገል ዛሬ ነው የኔ ቀን<br>\nዳግመኛ ዘወር ብዬ አላይም ኃላዬን<br>\nየፈለገ ነገር ቢሆን እጸናለሁ እስከሞት<br>\n<br>\nባገኝም ባጣም እኔ ኢየሱሴን አልተውም<br>\nኃላዬን አይቼ እርሱን አላሳዝንም<br>\nእሄዳለሁ እስክሞት ወደፊቴ<br>\nለእኔ ትርፌ ነው ለእርሱ ብዬ መሞቴ<br>\n<br>\nእስከሞት ኢየሱስ ለኔ ብሎ ተሰቃየ<br>\nለእኔ የተዘጋጀውን ሞት ራሱ ወሰደ<br>\nበደም ተገዝቻለሁ ዋጋ አለብኝ<br>\nፈርቼ ዝም ካልሁ እንደምሞት አወኩኝ<br>\n<br>\nከጨለማ ወደ ብርሀን የጠራኝ እንድቀመጥ አይደለም<br>\nለኢየሱስ ለመድሀኒቴ እኔ ምያለሁ<br>\nለማትረፍ ከእርሱ መክሊት ተቀብያለሁ<br>\n<br>\nመስቀሌን ተሸክሜ እርሱን ካልተከተልኩ<br>\nዝም ብዬ ተቸገርኩ ከቶ እርሱን አላመንኩ<br>\nመስቀሌን ተሸክሜ መስዋዕት እስከምሆን<br>\nበእውነት እገባለሁ ወደ አምላኬ ቤት<br>\n<br>\nአለምን ሁሉ ሳተርፍ<br>\nበምድራዊው በረከት ላይ አይኔን ሳሳርፍ<br>\nምን ትርፍ አለው ለኔ ሁሉም ያልፋል<br>\nየማያልፍ በረከት ኢየሱስ አለኝ /2/<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l37",
+    "title": "እግዛብሄር ፈለኩት መለሰልኝ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n           እግዛብሄር ፈለኩት መለሰልኝ <br>\nከመከራዬም ሁሉ እሱ አዳነኝ<br>\nከተያዝኩበት ወጥመድ አስመልጦኛል<br>\nምስጋናን እንድሰዋ ፊቱ አቁሞኛል<br>\n<br>\nምን እላለው ያደረክልኝን ድንቅ እያየው<br>\nምን እላለው አዲስ ቅኔ ላንተ እቀኛለው<br>\nበደሌንም በውሃ ውስጥ ደምስሰህልኝ <br>\nአዲስ ፍጥረት ላረከኝ አምላኬ ክብር አለኝ<br>\n<br>\n፩) አሮጌውን አዳም ፍጥረታዊነትን <br>\nቀየርከው በአዲስ በዳግም ልደት<br>\nፊትህን እንዳላይ ሚከለክለኝን <br>\nበመስቀል ጠርቀህ አስወገድክልኝ<br>\n<br>\nዛሬ አንተን ለብሼ ባንተ ድኛለው<br>\nበእጅ ባልሆነ ግርዘት ዘርህ ሆኛለው<br>\nነፍሴን በሰማይ ስፍራ ላስቀመጥክልኝ<br>\nብዙ የምናገረው የምልህ አለኝ<br>\n<br>\nእግዛብሄር ፈለኩት....<br>\n<br>\n፪) ነፍስህን ስለሀጥያት መስዋዕት አድርገህ<br>\nበሰማይ የምትኖር በክብር አርገህ<br>\nለአዲስ ልደት በሚሆን መታጠብ ላዳንከኝ<br>\nለነፍሴ መዳኒት ብዙ ምስጋና አለኝ<br>\n<br>\nዛሬ አንተን ለብሼ...<br>\n<br>\nአቤቱ በማዳንህም ቀን ይረዳህኝ<br>\nእየሱስ በመዳኒትም ቀን የሰማህኝ<br>\n<br>\nምስጋና ነው ላንተ ያለኝ ምስጋና ነው<br>\nእልልታ ነው ላንተ ያለኝ እልልታ ነው<br>\nአምልኮ ነው ላንተ ያለኝ አምልኮ ነው <br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l38",
+    "title": "አንሳልኝ ከመንገዴ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ወደ እኔ እንዳትመጣ እንቅፋት የሆነውን<br>\nበላዬ እንዳትሰራ የከለከለህን<br>\nከቤቴ እንዳትገባ በደጅ ያቆመህን<br>\nአይኔን የጋረደው እንዳላይ ክብርህን<br>\n<br>\nአንሳልኝ ከመንገዴ <br>\nይቅናልኝ አረማመዴ<br>\nአታስቀረኝ ወደኃላ <br>\nተስፋም የለኝ ካንተ ሌላ<br>\n<br>\nየህይወት ውሃ ወንዝ ከሆዴ እንዳይፈልቅ<br>\nበመንፈስ ቅዱስ ሀይል እንዳህፍለቀለቅ<br>\nመልካም ፍሬ መስሎኝ ያልኩበትን ችላ<br>\nጎትቶ ያስቀረኝን እሾህ አሜኬላ<br>\n<br>\nሳላውቅ የሄድኩበት ስውር መቃብር<br>\nክፋት የሞላበት መራራውን ስር<br>\nነቅለህ አውጣውና ልቤን ፍፁም አፅዳው<br>\nላንተ ስኖርልህ ነው ህይወቴ የሚያምረው<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l39",
+    "title": "አያለሁ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            አያለሁ አየዋለው አያለሁ<br>\nአያለሁ ብዙዎች ድነው አያለሁ<br>\nአያለሁ ነፍሳቶች በዝተው አያለሁ<br>\nአያለሁ ብዙዎች መተው አያለሁ<br>\n<br>\nአያለሁ አየዋለሁ |፬<br>\n<br>\nበአጭሩዋ የህይወት ዘመኔ<br>\nጌታ ሆይ ለምኘሃለሁ<br>\nሌላው ሁሉ ይቅርብኝና<br>\nበዝተን አይቼ ልሙት<br>\n<br>\nአያለሁ ብዙ ሺህ ነፍሳት አያለሁ<br>\nአያለሁ ስሙን ስለብሱ አያለሁ<br>\nአያለሁ በመንፈስ ቅዱስ አያለሁ<br>\nአያለሁ ስፍለቀለቁ አያለሁ<br>\n<br>\nአያለሁ አየዋለሁ |፬<br>\n<br>\nአያለሁ ሰራተኞቹን አያለሁ<br>\nአያለሁ ኢየሱስ ስልክ አያለሁ<br>\nአያለሁ በፍቅር ብዛት አያለሁ<br>\nአያለሁ ቃሉን ስዘሩ አያለሁ<br>\n<br>\nአያለሁ አየዋለሁ |፬<br>\n<br>\nአያለሁ ከአራቱም ማዕዘን አያለሁ<br>\nአያለሁ ነፍሳት ስጎሩፉ አያለሁ<br>\nአያለሁ ወደ አምላካቸው አያለሁ<br>\nአያለሁ እጅ ስዘሬጉ አያለሁ<br>\n<br>\nበአጭሩዋ...<br>\n<br>\nአያለሁ ቤተክርስቲያንኔን አያለሁ<br>\nአያለሁ ፍጹም ለምልማ አያለሁ<br>\nአያለሁ በመንፈስ ቅዱስ አያለሁ<br>\nአያለሁ ፍሬ አፍርታ አያለሁ<br>\n<br>\nአያለሁ...<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l40",
+    "title": "አለማ አለው እግዚአብሔር",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ፀሎትን የምትሰማ አምላክ አንተ የምትመልስ አንተ<br>\nጊዜ ቢወስድ የፀሎት መልስ አወራ ሰጋ ለባሽ<br>\nሳይሆንልኝ ለማይቀር ነገር ለምን ጊዜ ልቁጠር <br>\nአያሰቆርጥም ነገርህ ተስፍ አምናለው መልስህ አያስከፋ<br>\n<br>\n  አለማ አለው እግዚአብሔር<br>\n  ጊዜ በረዘመ ቁጥር <br>\n  እያስጠጋኝ ነው ወደ ክብር<br> \n  ተስፋ አይቆረጥም በእግዚአብሔር <br>\n  ጊዜ በረዘመ ቁጥር <br>\n   እያስዋበ ነው ነገር<br>\n<br>\nበፊትህ ተምበርክኬ ጠይቀህ ብዙ ነገር<br>\nእምባዬ ፈሶ ፈሶ ቢደክም ከቶ ጉልበቴ<br>\n<br>\nለምን[፪*]አልሆነም ከቶ አልልም <br>\nበአምለኬ ላይ አለማርርም <br>\nአምኜዋለው አድርገው ዘመዴ<br>\nሙሉ ነው እምነቴ አልቀር ከመንገዴ<br>\n<br>\nፀሎት ምትሰማ...<br>\n<br>\nአነጣጥሬ የሩቁን አያለው የመሀሉን ትቼ<br>\nበረከት አለው የእርሱ ሀሳብ ወድጀዋለው ውዴን ከልብ <br>\nሲዘረጋ እጁን ወደኔ መልስ ይመጣል ከሰማይ<br> \nየተሰወረ አንዳችም ነገር አይኖርም መልሴ ይሆናል የክብር <br>\n<br>\nእግዚአብሔር [፫*] እንደ ሰው አይደለም<br>\nእግዚአብሔር እንካ ቢዬ ነገሬን ሰጥቼ <br>\nአልቀይርም ሀሳቤን ወጀቡን ፈርቼ<br>\nስነግረው የልቤን በሙሉ ዘርዝሬ<br>\nይሆናል አምኛለው ይሰምራል ነገሬ<br>\n<br>\nለአብርሃም ይስሐቅ መወለዱ መልስ ከሆነ<br>\nተስፋ መቁረጥ በሳራ ላይ ከገነነ<br>\nየእግር ፈቃድ በሰው ሀሳብ ላይተካ<br>\nለምን ይምሰል የፀሎት መልስ ማይሳካ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l41",
+    "title": "እከተልሃለሁ",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            ወደፊቴም ብሄድ ወደኋላ<br>\nመረቤን ብጥል እንዲሁ ላላ<br>\nግራ ቀኜን ብዬ ብፈልግ መላ<br>\nለኔ ማትረፊያ ሚሆን የለም ሌላ<br>\n<br>\nብዙ ማትረፊያዬ ነህ አንተማ<br>\nባንተ ረክቻለሁ ላልጠማ<br>\nእከተልሃለሁ አልልም ዋላ<br>\nወዲህ ወድያ ማለት የለም በቃ<br>\n<br>\nየህይወትን ምንጭ አንተን አግንቼ<br>\nጥሜን ቆርጬ ፍፁም ረክቼ <br>\nእንዴት ልፈልግ ሌላ አማራጭ<br>\nመሄጃም የለኝ እኔስ ካንተ ውጭ<br>\n<br>\nአንዳች አላተርፍ በራሴ ብጥር<br>\nብዙ ብለፋ ብዙ ብፍጨረጨር<br>\nእኔስ ያላንተ አይሆንልኝም<br>\nመንገዴም ከቶ አይቀናልኝም<br>\n<br>\nባለህበት ልሁን ዘውትር<br>\nበምትኖርበት እኔም ልኑር<br>\nበመከተል ያንተን ዱካ<br>\nበዝያ ነው ትርፉ ለካ<br>\n        </p>\n    </div>"
+  },
+      {
+        "id": "l42",
+    "title": "ወንጌል ያሸንፉል",
+    "lyrics": "<div  class=\"lyrics-box\">\n        <p>\n            የጌታችንን ክብር እንደ መሥተወት<br>\n እያብለጨለጭን <br>\nየሐዋሪያትን ወንጌል ለፍጥረት እናውጃለን <br>\nከክብር ወደ ክብር እንለወጣለን <br>\nበእግዛብሔር እውቀት ላይ የሚነሳውን እናፈርሳለን <br>\n<br>\nጠላት ይልቀቅ ስፍራውን ክብርህ ይገለጥ<br>\nሰማይ ይከፈትልን  ምድር ትናወጥ<br>\nየወንጌል እሳት ምድርን ይውረስ<br>\nየሀሰት ነብያት ስራቸው ይፍረስ <br>\n    <br>\nወንጌል ያሸንፉል<br> \nወንጌል ድል ያደርጋል <br>\nወንጌል ያስወርሳል<br>\nወንጌል ይማርካል<br>\n         <br>\n1..በኪሩቤል ላይ በዙፋንሕ የተቀመጥክ<br>\nዘመናት የማይሽሩህ የምትኖር ዘላለም<br>\nከአማልክት በላይ በቅድስና የላቅሕ <br>\nየሐዋሪያት አምላክ ዛሬም ትሠራለሕ<br>\n<br>\nገና ጅማሬ ነው <br>\nሌላው ስፍራውን ይለቃል<br> \nየክብርሕ ብርሐን ምድርን ይሞላል <br>\nገና ጅማሬ ነው ሌላው ስፍራውን ይለቃል<br>\nቃልሕ ሲገለጥ ምርኮ ይመለሳል <br>\n       <br>\n  ቃልህ ስገለጥ ጨለማው ይበራል<br>\n  ብርሀን ይሆናል<br>\n ተራራው ዝቅ ይላል<br>\n ቀንበር ይሰበራል<br>\n <br>\nቃልህ ሲገለጥ እውሩ ይበራል <br>\nሞት እንቅልፍ ይሆናል<br>\nባህር ይከፈላል<br>\nምርኮ ይመለሣል<br>\n    <br>\nወንጌል ...<br>\n<br>\n2 በጨለማ ላሉ በግዞት ቤት ለታሠሩ<br>\n በሀሠት ትምህርት ተይዘው ለሚኖሩ<br>\nየእወነት ወንጌል ይብራ በአለም ዙሪያ<br>\nይገለጥ ክንድህ ታምራትንም ይስራ <br>\n          <br>\nገና ጅማሬ ነው <br>\nሌላው ስፍራውን ይለቃ<br>\nየክብርህ  ብርሀን ምድርን ይሞላል<br>\nገና ጅማሬ ነው <br>\nሌላው ስፍራውን ይለቃል<br>\nወንጌልህ ሲገለጥ ምርኮ ይመለሳል <br>\n<br>\nወንጌልህ ሲገለጥ ጨለማው  ይበራል<br>\nብርሀን ይሆናል<br>\nተራራው ዝቅ ይላል<br>\nቀንበር ይሰበራል<br>\n         <br>\nወንጌልህ ሲገለጥ እውሩ ይበራል<br>\nሞት እንቅልፍ ይሆናል<br>\nሽባውም ይዘላል<br>\n ታምራት ይሆናል <br>\nወንጌል ያሸንፉል <br>\nወንጌል ድል ያደርጋል<br>\nወንጌል ያስወርሳል<br>\nወንጌል  ይማርካል<br>\n        </p>\n    </div>"
+  }
+];
+
+    /* =========================================================
+       APP STATE
+       ---------------------------------------------------------
+       localStorage can contain invalid/corrupted values after a
+       manual edit or an interrupted write. These helpers prevent
+       one bad value from breaking the entire website on startup.
+       ========================================================= */
+    function readJSON(key, fallback) {
+      try {
+        const value = localStorage.getItem(key);
+        return value ? JSON.parse(value) : fallback;
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    function readNumber(key, fallback) {
+      const value = Number(localStorage.getItem(key));
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    const state = {
+      currentSongId: null,
+      theme: localStorage.getItem("as_theme") === "light" ? "light" : "dark",
+      fontSize: readNumber("as_font", 1),
+      favorites: Array.isArray(readJSON("as_favorites", [])) ? readJSON("as_favorites", []) : [],
+      recent: Array.isArray(readJSON("as_recent", [])) ? readJSON("as_recent", []) : [],
+      playlists: Array.isArray(readJSON("as_playlists", [])) ? readJSON("as_playlists", []) : [],
+      speed: readNumber("as_speed", 1),
+      shuffle: localStorage.getItem("as_shuffle") === "1",
+      repeat: Math.max(0, Math.min(2, Math.floor(readNumber("as_repeat", 0))))
+    };
+
+    let sleepTimer = null;
+    let pendingSongId = null;
+
+    const audio = document.getElementById("audio");
+
+    /* =========================================================
+       SMALL HELPERS
+       ========================================================= */
+    function $(id) {
+      return document.getElementById(id);
+    }
+
+    function getSong(id) {
+      return SONGS.find(song => song.id === id);
+    }
+
+    function initials(title) {
+      const words = String(title).trim().split(/\s+/).filter(Boolean);
+
+      if (words.length === 1) {
+        return words[0].slice(0, 2).toUpperCase();
+      }
+
+      return (words[0][0] || "A") + (words[1][0] || "S");
+    }
+
+    function formatTime(seconds) {
+      if (!Number.isFinite(seconds)) return "0:00";
+
+      const minutes = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+
+      return minutes + ":" + String(secs).padStart(2, "0");
+    }
+
+    function isFavorite(id) {
+      return state.favorites.includes(id);
+    }
+
+    function saveState() {
+      localStorage.setItem("as_theme", state.theme);
+      localStorage.setItem("as_font", String(state.fontSize));
+      localStorage.setItem("as_favorites", JSON.stringify(state.favorites));
+      localStorage.setItem("as_recent", JSON.stringify(state.recent));
+      localStorage.setItem("as_playlists", JSON.stringify(state.playlists));
+      localStorage.setItem("as_speed", String(state.speed));
+      localStorage.setItem("as_shuffle", state.shuffle ? "1" : "0");
+      localStorage.setItem("as_repeat", String(state.repeat));
+    }
+
+    function showToast(message) {
+      const toast = $("toast");
+
+      toast.textContent = message;
+      toast.classList.add("show");
+
+      clearTimeout(toast._timer);
+
+      toast._timer = setTimeout(() => {
+        toast.classList.remove("show");
+      }, 2300);
+    }
+
+    /* =========================================================
+       THEME
+       ========================================================= */
+    function applyTheme() {
+      document.documentElement.dataset.theme = state.theme;
+      $("themeButton").textContent =
+        state.theme === "dark" ? "Dark" : "Light";
+    }
+
+    /* =========================================================
+       SONG LIST
+       ========================================================= */
+    function renderSongList(songs = SONGS) {
+      const list = $("songList");
+
+      if (!songs.length) {
+        list.innerHTML =
+          '<div style="padding:30px;text-align:center;color:var(--muted)">No songs found.</div>';
+        return;
+      }
+
+      list.innerHTML = songs.map((song, index) => {
+        const playing = state.currentSongId === song.id && !audio.paused;
+
+        return `
+          <div class="song-row" data-song-id="${song.id}">
+            <span class="song-cover">AS</span>
+
+            <span class="song-info">
+              <span class="song-title">${song.title}</span>
+              ${playing
+                ? '<span class="playing-now-badge"><i class="playing-now-dot"></i> Playing Now</span>'
+                : '<span class="song-hint">tap to open song</span>'}
+              <span class="song-number">
+                Song ${String(index + 1).padStart(2, "0")}
+              </span>
+            </span>
+
+            <span>
+              <button
+                class="favorite-button"
+                type="button"
+                data-favorite-id="${song.id}"
+                aria-label="Favorite">
+                ${isFavorite(song.id) ? "♥" : "♡"}
+              </button>
+            </span>
+          </div>
+        `;
+      }).join("");
+    }
+
+
+    /* =========================================================
+       RECENT HISTORY
+       ========================================================= */
+    function addToRecent(id) {
+      state.recent = [
+        id,
+        ...state.recent.filter(item => item !== id)
+      ].slice(0, 20);
+
+      saveState();
+    }
+
+    /* =========================================================
+       LYRICS
+       ========================================================= */
+    function showLyrics(id) {
+      const song = getSong(id);
+
+      if (!song) return;
+
+      $("lyricsTitle").textContent = song.title;
+      $("lyricsContent").innerHTML =
+        song.lyrics && String(song.lyrics).trim()
+          ? song.lyrics
+          : '<div class="lyrics-box"><p>Lyrics have not been added for this song yet.</p></div>';
+
+      const lyricsBox =
+        $("lyricsContent").querySelector(".lyrics-box");
+
+      if (lyricsBox) {
+        lyricsBox.style.fontSize = state.fontSize + "rem";
+      }
+
+      $("lyricsFavorite").textContent =
+        isFavorite(id) ? "♥" : "♡";
+
+      $("lyricsFavorite").style.color =
+        isFavorite(id) ? "var(--danger)" : "";
+
+      $("lyricsScroll").scrollTop = 0;
+      $("lyricsScreen").classList.add("open");
+    }
+
+    function closeLyrics() {
+      $("lyricsScreen").classList.remove("open");
+    }
+
+
+    /* =========================================================
+       SONG ACTION CHOOSER
+       ========================================================= */
+    function openSongActions(id) {
+      const song = getSong(id);
+
+      if (!song) return;
+
+      pendingSongId = id;
+
+      $("actionCover").textContent = "AS";
+      $("actionTitle").textContent = song.title;
+
+      $("songActionOverlay").classList.add("open");
+    }
+
+    function closeSongActions() {
+      pendingSongId = null;
+      $("songActionOverlay").classList.remove("open");
+    }
+
+    $("openLyricsOption").onclick = () => {
+      if (!pendingSongId) return;
+
+      const id = pendingSongId;
+      closeSongActions();
+      showLyrics(id);
+      addToRecent(id);
+    };
+
+    $("playAudioOption").onclick = () => {
+      if (!pendingSongId) return;
+
+      const id = pendingSongId;
+      closeSongActions();
+      openSong(id, true, false);
+      openFullPlayer();
+    };
+
+    $("addPlaylistOption").onclick = () => {
+      if (!pendingSongId) return;
+      const id = pendingSongId;
+      closeSongActions();
+      openPlaylistPicker(id);
+    };
+
+    $("cancelSongAction").onclick = closeSongActions;
+    $("actionBackButton").onclick = closeSongActions;
+
+    $("songActionOverlay").onclick = event => {
+      if (event.target === $("songActionOverlay")) {
+        closeSongActions();
+      }
+    };
+
+    /* =========================================================
+       PLAYER
+       ========================================================= */
+    function updatePlayerUI() {
+      const song = getSong(state.currentSongId);
+
+      if (!song) return;
+
+      const cover = "AS";
+
+      $("miniCover").textContent = cover;
+      $("miniTitle").textContent = song.title;
+
+      $("playerCover").textContent = cover;
+      $("playerTitle").textContent = song.title;
+
+      $("playButton").textContent = audio.paused ? "▶" : "⏸";
+      $("miniPlay").textContent = audio.paused ? "▶" : "⏸";
+
+      $("lyricsFavorite").textContent =
+        isFavorite(song.id) ? "♥" : "♡";
+
+      $("lyricsFavorite").style.color =
+        isFavorite(song.id) ? "var(--danger)" : "";
+
+      updateArtworkState();
+    }
+
+    function updateArtworkState() {
+      const playing = Boolean(state.currentSongId) && !audio.paused;
+
+      $("playerCover").classList.toggle("playing", playing);
+      $("miniCover").classList.toggle("playing", playing);
+      $("playerTitle").classList.toggle("playing", playing);
+      $("miniTitle").classList.toggle("playing", playing);
+
+      if (playing) {
+        $("miniStatus").textContent = "Playing Now";
+      } else if (state.currentSongId) {
+        $("miniStatus").textContent = "Paused";
+      } else {
+        $("miniStatus").textContent = "Tap a song to play";
+      }
+
+      // Keep the bottom-nav icon synchronized after play/pause/error.
+      updatePlayingNowButton();
+    }
+
+    function showMiniPlayer() {
+      $("miniPlayer").classList.add("visible");
+
+      // Reserve bottom space only while the floating player is visible.
+      $("home").classList.add("mini-active");
+      $("libraryScreen").classList.add("mini-active");
+
+      updatePlayingNowButton();
+    }
+
+    function hideMiniPlayer() {
+      $("miniPlayer").classList.remove("visible");
+      $("home").classList.remove("mini-active");
+      $("libraryScreen").classList.remove("mini-active");
+    }
+
+    /* =========================================================
+       PLAYING NOW NAVIGATION
+       ---------------------------------------------------------
+       If no song is currently playing:
+       - show a PLAY icon
+       - tapping Playing Now starts a random song
+
+       If a song is already playing:
+       - show the active music icon
+       - tapping Playing Now opens that current player
+       ========================================================= */
+    function updatePlayingNowButton() {
+      const button = $("playingNowNav");
+      const icon = $("playingNowNavIcon");
+
+      if (!button || !icon) return;
+
+      const isPlaying = !audio.paused && state.currentSongId;
+
+      icon.textContent = isPlaying ? "♫" : "▶";
+      button.classList.toggle("ready", Boolean(isPlaying));
+    }
+
+    function openRandomSong() {
+      if (!SONGS.length) {
+        showToast("No songs have been added yet.");
+        return;
+      }
+
+      const randomIndex = Math.floor(Math.random() * SONGS.length);
+      const randomSong = SONGS[randomIndex];
+
+      closePlayingNowEmpty();
+      openSong(randomSong.id, true, false);
+      openFullPlayer();
+    }
+
+    function openFullPlayer() {
+      if (!state.currentSongId) return;
+
+      updatePlayerUI();
+      $("playerOverlay").classList.add("open");
+    }
+
+    function closeFullPlayer() {
+      $("playerOverlay").classList.remove("open");
+    }
+
+    function openPlayingNowEmpty() {
+      // Only the empty Playing Now view should be visible here.
+      $("songActionOverlay").classList.remove("open");
+      $("playlistPicker").classList.remove("open");
+      $("searchOverlay").classList.remove("open");
+      $("settingsOverlay").classList.remove("open");
+      $("lyricsScreen").classList.remove("open");
+      closeLibrary();
+      closeFullPlayer();
+      $("playingNowEmpty").classList.add("open");
+    }
+
+    function closePlayingNowEmpty() {
+      $("playingNowEmpty").classList.remove("open");
+    }
+
+    function openSong(id, autoplay = true, openLyricsScreen = false) {
+      const song = getSong(id);
+
+      if (!song) return false;
+
+      state.currentSongId = id;
+      addToRecent(id);
+
+      // Playing audio and reading lyrics are separate actions.
+      if (openLyricsScreen) {
+        showLyrics(id);
+      }
+
+      updatePlayerUI();
+
+      /* -------------------------------------------------------
+         AUDIO MAPPING
+         The song ID controls the MP3 filename automatically.
+         Example: id "l12" -> audio/l12.mp3
+         ------------------------------------------------------- */
+      audio.src = "audio/" + id + ".mp3";
+      audio.playbackRate = state.speed;
+      audio.load();
+
+      if (autoplay) {
+        audio.play().catch(() => {
+          hideMiniPlayer();
+          closeFullPlayer();
+          updateArtworkState();
+          $("miniStatus").textContent =
+            "Audio unavailable";
+          showToast(
+            "Audio missing: audio/" + id + ".mp3"
+          );
+        });
+      }
+
+      return true;
+    }
+
+    function playCurrent() {
+      if (!state.currentSongId) return;
+
+      if (audio.paused) {
+        audio.play().catch(() => {
+          showToast("Audio file could not be played.");
+        });
+      } else {
+        audio.pause();
+      }
+    }
+
+    function getNextIndex(direction = 1) {
+      let index = SONGS.findIndex(
+        song => song.id === state.currentSongId
+      );
+
+      if (index < 0) index = 0;
+
+      if (state.shuffle) {
+        return Math.floor(Math.random() * SONGS.length);
+      }
+
+      index += direction;
+
+      if (index < 0) index = SONGS.length - 1;
+      if (index >= SONGS.length) index = 0;
+
+      return index;
+    }
+
+    function playSongAt(index) {
+      if (index < 0 || index >= SONGS.length) return;
+
+      openSong(SONGS[index].id, true);
+    }
+
+    function cycleRepeat() {
+      state.repeat = (state.repeat + 1) % 3;
+
+      $("repeatButton").textContent =
+        state.repeat === 0 ? "🔁" :
+        state.repeat === 1 ? "🔂" :
+        "🔁∞";
+
+      saveState();
+    }
+
+    function cycleSpeed() {
+      const speeds = [1, 1.25, 1.5, 1.75, 2, .75];
+      const currentIndex = speeds.indexOf(state.speed);
+
+      state.speed =
+        speeds[(currentIndex + 1) % speeds.length];
+
+      audio.playbackRate = state.speed;
+      $("speedButton").textContent = state.speed + "×";
+
+      saveState();
+    }
+
+    function toggleSleepTimer() {
+      if (sleepTimer) {
+        clearTimeout(sleepTimer);
+        sleepTimer = null;
+
+        $("sleepButton").textContent = "Sleep";
+        showToast("Sleep timer off");
+        return;
+      }
+
+      sleepTimer = setTimeout(() => {
+        audio.pause();
+        sleepTimer = null;
+        $("sleepButton").textContent = "Sleep";
+        showToast("Playback stopped");
+      }, 30 * 60 * 1000);
+
+      $("sleepButton").textContent = "30m";
+      showToast("Sleep timer: 30 minutes");
+    }
+
+    /* =========================================================
+       FAVORITES
+       ========================================================= */
+    function toggleFavorite(id) {
+      if (isFavorite(id)) {
+        state.favorites =
+          state.favorites.filter(item => item !== id);
+      } else {
+        state.favorites.push(id);
+      }
+
+      saveState();
+
+      renderSongList();
+      renderLibrary();
+      updatePlayerUI();
+    }
+
+    /* =========================================================
+       SEARCH
+       ========================================================= */
+    function searchSongs(query) {
+      const text = query.toLowerCase().trim();
+
+      if (!text) {
+        $("searchResults").innerHTML = "";
+        return;
+      }
+
+      const matches = SONGS.filter(song => {
+        const title = song.title.toLowerCase();
+        const lyrics = song.lyrics
+          .replace(/<[^>]*>/g, " ")
+          .toLowerCase();
+
+        return title.includes(text) || lyrics.includes(text);
+      });
+
+      $("searchResults").innerHTML = matches.length
+        ? matches.map(song => `
+            <div class="search-result"
+                 data-search-song-id="${song.id}">
+              <div class="search-result-title">
+                ${song.title}
+              </div>
+              <div class="search-result-sub">
+                Tap to open lyrics and player
+              </div>
+            </div>
+          `).join("")
+        : '<div style="padding:25px;color:var(--muted)">No matching songs.</div>';
+    }
+
+    /* =========================================================
+       LIBRARY / PLAYLISTS
+       ========================================================= */
+    function playlistSongIds(playlist) {
+      return Array.isArray(playlist.songs) ? playlist.songs : [];
+    }
+
+    function createPlaylist(name) {
+      const clean = String(name || "").trim();
+      if (!clean) return null;
+
+      const duplicate = state.playlists.some(
+        p => p.name.toLowerCase() === clean.toLowerCase()
+      );
+
+      if (duplicate) {
+        showToast("A playlist with that name already exists.");
+        return null;
+      }
+
+      const playlist = {
+        id: "pl_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+        name: clean,
+        songs: []
+      };
+
+      state.playlists.push(playlist);
+      saveState();
+      renderLibrary();
+      showToast("Playlist created");
+      return playlist;
+    }
+
+    function removePlaylist(id) {
+      const playlist = state.playlists.find(p => p.id === id);
+      if (!playlist) return;
+
+      if (!confirm('Delete playlist "' + playlist.name + '"?')) return;
+
+      state.playlists = state.playlists.filter(p => p.id !== id);
+      saveState();
+      renderLibrary();
+      showToast("Playlist deleted");
+    }
+
+    function addSongToPlaylist(playlistId, songId) {
+      const playlist = state.playlists.find(p => p.id === playlistId);
+      const song = getSong(songId);
+
+      if (!playlist || !song) return;
+
+      playlist.songs = playlistSongIds(playlist);
+
+      if (playlist.songs.includes(songId)) {
+        showToast("Song is already in this playlist");
+        return;
+      }
+
+      playlist.songs.push(songId);
+      saveState();
+      renderLibrary();
+      showToast('Added to "' + playlist.name + '"');
+    }
+
+    function removeSongFromPlaylist(playlistId, songId) {
+      const playlist = state.playlists.find(p => p.id === playlistId);
+      if (!playlist) return;
+
+      playlist.songs = playlistSongIds(playlist)
+        .filter(id => id !== songId);
+
+      saveState();
+      renderLibrary();
+    }
+
+    function playPlaylist(playlistId) {
+      const playlist = state.playlists.find(p => p.id === playlistId);
+      if (!playlist) return;
+
+      const songs = playlistSongIds(playlist)
+        .map(getSong)
+        .filter(Boolean);
+
+      if (!songs.length) {
+        showToast("This playlist is empty");
+        return;
+      }
+
+      state.shuffle = false;
+      saveState();
+      openSong(songs[0].id, true);
+    }
+
+    function renderLibrary() {
+      const favoriteSongs = state.favorites
+        .map(getSong)
+        .filter(Boolean);
+
+      $("favoriteCount").textContent =
+        favoriteSongs.length + (favoriteSongs.length === 1 ? " song" : " songs");
+
+      $("favoriteSongs").innerHTML = favoriteSongs.length
+        ? favoriteSongs.map(song => `
+            <div class="library-song" data-library-song-id="${song.id}">
+              <div class="library-song-cover">AS</div>
+              <div>
+                <div class="library-song-title">${song.title}</div>
+                <div class="library-song-sub">Favorite • Tap to play</div>
+              </div>
+              <button type="button" class="library-remove"
+                      data-remove-favorite="${song.id}"
+                      aria-label="Remove favorite">♥</button>
+            </div>
+          `).join("")
+        : '<div class="library-empty">No favorite songs yet.<br>Tap ♡ beside a song to save it here.</div>';
+
+      $("playlistCount").textContent =
+        state.playlists.length +
+        (state.playlists.length === 1 ? " playlist" : " playlists");
+
+      $("playlistList").innerHTML = state.playlists.length
+        ? state.playlists.map(playlist => {
+            const songs = playlistSongIds(playlist)
+              .map(getSong)
+              .filter(Boolean);
+
+            return `
+              <div class="playlist-card" data-playlist-card="${playlist.id}">
+                <div class="playlist-head">
+                  <div class="playlist-icon">♫</div>
+                  <div class="playlist-info">
+                    <div class="playlist-name">${escapeHtml(playlist.name)}</div>
+                    <div class="playlist-meta">
+                      ${songs.length} ${songs.length === 1 ? "song" : "songs"} • Saved on this device
+                    </div>
+                  </div>
+                </div>
+
+                <div class="playlist-actions">
+                  <button type="button" class="library-action primary"
+                          data-play-playlist="${playlist.id}">▶ Play</button>
+                  <button type="button" class="library-action"
+                          data-toggle-playlist="${playlist.id}">View Songs</button>
+                  <button type="button" class="library-action"
+                          data-delete-playlist="${playlist.id}">Delete</button>
+                </div>
+
+                <div class="playlist-songs">
+                  ${songs.length
+                    ? songs.map(song => `
+                        <div class="library-song" data-library-song-id="${song.id}">
+                          <div class="library-song-cover">AS</div>
+                          <div>
+                            <div class="library-song-title">${song.title}</div>
+                            <div class="library-song-sub">Tap to play</div>
+                          </div>
+                          <button type="button" class="library-remove"
+                                  data-remove-playlist-song="${playlist.id}|${song.id}"
+                                  aria-label="Remove song">×</button>
+                        </div>
+                      `).join("")
+                    : '<div class="library-empty">This playlist is empty.</div>'}
+                </div>
+              </div>
+            `;
+          }).join("")
+        : '<div class="library-empty">No playlists yet.<br>Create one and build your own collection.</div>';
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
+      }[char]));
+    }
+
+    function openPlaylistPicker(songId) {
+      const song = getSong(songId);
+      if (!song) return;
+
+      $("pickerSongName").textContent =
+        'Choose where to save "' + song.title + '"';
+
+      const list = $("playlistPickerList");
+
+      list.innerHTML = state.playlists.length
+        ? state.playlists.map(playlist => {
+            const exists = playlistSongIds(playlist).includes(songId);
+            return `
+              <button type="button" class="picker-item"
+                      data-picker-playlist="${playlist.id}"
+                      ${exists ? "disabled" : ""}>
+                <strong>♫ ${escapeHtml(playlist.name)}</strong>
+                <span>${exists ? "Already added" : playlistSongIds(playlist).length + " songs"}</span>
+              </button>
+            `;
+          }).join("")
+        : '<div class="library-empty">No playlists yet. Create one below.</div>';
+
+      $("playlistPicker").dataset.songId = songId;
+      $("playlistPicker").classList.add("open");
+    }
+
+    function closePlaylistPicker() {
+      $("playlistPicker").classList.remove("open");
+      delete $("playlistPicker").dataset.songId;
+    }
+
+    function createPlaylistPrompt() {
+      const name = prompt("Enter a name for your playlist:");
+      if (!name || !name.trim()) return null;
+      return createPlaylist(name);
+    }
+
+    /* =========================================================
+       SETTINGS
+       ========================================================= */
+    function showFavorites() {
+      openLibrary();
+      $("settingsOverlay").classList.remove("open");
+      document.querySelectorAll(".nav-button")
+        .forEach(item => item.classList.toggle("active", item.dataset.page === "library"));
+    }
+
+    function showRecent() {
+      const songs = state.recent
+        .map(getSong)
+        .filter(Boolean);
+
+      renderSongList(songs);
+      $("songListScroll").scrollTop = 0;
+      $("settingsOverlay").classList.remove("open");
+    }
+
+    function openLibrary() {
+      renderLibrary();
+      $("libraryScreen").classList.add("open");
+      $("home").style.display = "none";
+    }
+
+    function closeLibrary() {
+      $("libraryScreen").classList.remove("open");
+      $("home").style.display = "";
+    }
+
+    /* =========================================================
+       EVENT HANDLERS
+       ========================================================= */
+
+    // Song click
+    $("songList").addEventListener("click", event => {
+      const favorite = event.target.closest("[data-favorite-id]");
+
+      if (favorite) {
+        event.stopPropagation();
+        toggleFavorite(favorite.dataset.favoriteId);
+        return;
+      }
+
+      const row = event.target.closest("[data-song-id]");
+
+      if (row) {
+        openSongActions(row.dataset.songId);
+      }
+    });
+
+    $("favoriteSongs").addEventListener("click", event => {
+      const remove = event.target.closest("[data-remove-favorite]");
+      if (remove) {
+        event.stopPropagation();
+        toggleFavorite(remove.dataset.removeFavorite);
+        renderLibrary();
+        return;
+      }
+
+      const row = event.target.closest("[data-library-song-id]");
+      if (row) openSong(row.dataset.librarySongId, true);
+    });
+
+    $("playlistList").addEventListener("click", event => {
+      const remove = event.target.closest("[data-remove-playlist-song]");
+      if (remove) {
+        event.stopPropagation();
+        const [playlistId, songId] = remove.dataset.removePlaylistSong.split("|");
+        removeSongFromPlaylist(playlistId, songId);
+        return;
+      }
+
+      const play = event.target.closest("[data-play-playlist]");
+      if (play) {
+        playPlaylist(play.dataset.playPlaylist);
+        return;
+      }
+
+      const toggle = event.target.closest("[data-toggle-playlist]");
+      if (toggle) {
+        const card = toggle.closest(".playlist-card");
+        card.classList.toggle("expanded");
+        toggle.textContent =
+          card.classList.contains("expanded") ? "Hide Songs" : "View Songs";
+        return;
+      }
+
+      const del = event.target.closest("[data-delete-playlist]");
+      if (del) {
+        removePlaylist(del.dataset.deletePlaylist);
+        return;
+      }
+
+      const row = event.target.closest("[data-library-song-id]");
+      if (row) openSong(row.dataset.librarySongId, true);
+    });
+
+    $("createPlaylistButton").onclick = createPlaylistPrompt;
+
+    $("pickerNewPlaylist").onclick = () => {
+      const playlist = createPlaylistPrompt();
+      if (!playlist) return;
+
+      const songId = $("playlistPicker").dataset.songId;
+      if (songId) addSongToPlaylist(playlist.id, songId);
+      closePlaylistPicker();
+    };
+
+    $("playlistPickerList").addEventListener("click", event => {
+      const item = event.target.closest("[data-picker-playlist]");
+      if (!item || item.disabled) return;
+
+      const songId = $("playlistPicker").dataset.songId;
+      addSongToPlaylist(item.dataset.pickerPlaylist, songId);
+      closePlaylistPicker();
+    });
+
+    $("closePlaylistPicker").onclick = closePlaylistPicker;
+
+    $("playlistPicker").onclick = event => {
+      if (event.target === $("playlistPicker")) closePlaylistPicker();
+    };
+
+    // Search result click
+    $("searchResults").addEventListener("click", event => {
+      const result =
+        event.target.closest("[data-search-song-id]");
+
+      if (!result) return;
+
+      $("searchOverlay").classList.remove("open");
+      openSongActions(result.dataset.searchSongId);
+    });
+
+    $("closeLyrics").onclick = closeLyrics;
+
+    $("lyricsFavorite").onclick = () => {
+      if (state.currentSongId) {
+        toggleFavorite(state.currentSongId);
+        updatePlayerUI();
+      }
+    };
+
+    $("miniPlayer").onclick = event => {
+      if (event.target.closest("#miniPlay")) return;
+      openFullPlayer();
+    };
+
+    $("miniPlay").onclick = event => {
+      event.stopPropagation();
+      playCurrent();
+    };
+
+    $("playButton").onclick = playCurrent;
+
+    $("previousButton").onclick = () => {
+      playSongAt(getNextIndex(-1));
+    };
+
+    $("nextButton").onclick = () => {
+      playSongAt(getNextIndex(1));
+    };
+
+    $("shuffleButton").onclick = () => {
+      state.shuffle = !state.shuffle;
+      $("shuffleButton").classList.toggle(
+        "active",
+        state.shuffle
+      );
+      saveState();
+    };
+
+    $("repeatButton").onclick = cycleRepeat;
+
+    $("back10Button").onclick = () => {
+      audio.currentTime =
+        Math.max(0, audio.currentTime - 10);
+    };
+
+    $("forward10Button").onclick = () => {
+      audio.currentTime =
+        Math.min(
+          audio.duration || 0,
+          audio.currentTime + 10
+        );
+    };
+
+    $("speedButton").onclick = cycleSpeed;
+
+    $("sleepButton").onclick = toggleSleepTimer;
+
+    $("closePlayerButton").onclick = closeFullPlayer;
+
+    $("seek").oninput = () => {
+      if (!audio.duration) return;
+
+      audio.currentTime =
+        audio.duration *
+        (Number($("seek").value) / 100);
+    };
+
+    $("shareButton").onclick = async () => {
+      if (!state.currentSongId) return;
+
+      const song = getSong(state.currentSongId);
+      const url =
+        location.href.split("#")[0] + "#" + song.id;
+
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: song.title,
+            url
+          });
+        } else if (navigator.clipboard) {
+          await navigator.clipboard.writeText(url);
+          showToast("Song link copied");
+        } else {
+          showToast("Sharing is not supported.");
+        }
+      } catch (_) {}
+    };
+
+    // Search
+    $("searchButton").onclick = () => {
+      $("searchOverlay").classList.add("open");
+      $("searchInput").focus();
+    };
+
+    $("closeSearch").onclick = () => {
+      $("searchOverlay").classList.remove("open");
+    };
+
+    $("searchInput").oninput = event => {
+      searchSongs(event.target.value);
+    };
+
+    // Settings
+    $("themeButton").onclick = () => {
+      state.theme =
+        state.theme === "dark" ? "light" : "dark";
+
+      saveState();
+      applyTheme();
+    };
+
+    $("fontSize").onchange = event => {
+      state.fontSize = Number(event.target.value);
+      saveState();
+
+      const lyricsBox =
+        $("lyricsContent").querySelector(".lyrics-box");
+
+      if (lyricsBox) {
+        lyricsBox.style.fontSize =
+          state.fontSize + "rem";
+      }
+    };
+
+    $("favoritesButton").onclick = showFavorites;
+    $("recentButton").onclick = showRecent;
+
+    $("resetButton").onclick = () => {
+      state.theme = "dark";
+      state.fontSize = 1;
+      state.favorites = [];
+      state.recent = [];
+      state.playlists = [];
+      state.speed = 1;
+      state.shuffle = false;
+      state.repeat = 0;
+
+      saveState();
+      applyTheme();
+
+      $("fontSize").value = "1";
+      $("speedButton").textContent = "1×";
+      $("shuffleButton").classList.remove("active");
+      $("repeatButton").textContent = "🔁";
+
+      renderSongList();
+      renderLibrary();
+      showToast("Settings reset");
+    };
+
+    $("closeSettings").onclick = () => {
+      $("settingsOverlay").classList.remove("open");
+    };
+
+    $("settingsOverlay").onclick = event => {
+      if (event.target === $("settingsOverlay")) {
+        $("settingsOverlay").classList.remove("open");
+      }
+    };
+
+    /* =========================================================
+       PLAYING NOW EMPTY STATE
+       ========================================================= */
+    $("randomPlayButton").onclick = () => {
+      closePlayingNowEmpty();
+      openRandomSong();
+    };
+
+    $("playingNowEmptyBack").onclick = () => {
+      closePlayingNowEmpty();
+      closeLibrary();
+      renderSongList();
+      document.querySelectorAll(".nav-button")
+        .forEach(item => item.classList.toggle("active", item.dataset.page === "home"));
+    };
+
+    // Bottom navigation
+    document.querySelectorAll(".nav-button").forEach(button => {
+      button.addEventListener("click", () => {
+        closePlayingNowEmpty();
+        $("lyricsScreen").classList.remove("open");
+        $("songActionOverlay").classList.remove("open");
+        $("playlistPicker").classList.remove("open");
+        $("searchOverlay").classList.remove("open");
+        $("settingsOverlay").classList.remove("open");
+
+        document.querySelectorAll(".nav-button")
+          .forEach(item => item.classList.remove("active"));
+
+        button.classList.add("active");
+
+        const page = button.dataset.page;
+
+        if (page === "home") {
+          closeLibrary();
+          renderSongList();
+          $("songListScroll").scrollTop = 0;
+          return;
+        }
+
+        if (page === "library") {
+          openLibrary();
+          $("libraryScroll").scrollTop = 0;
+          return;
+        }
+
+        if (page === "radio") {
+          closeLibrary();
+
+          // Playing Now is an empty state until the user presses ▶.
+          if (!state.currentSongId || audio.paused) {
+            openPlayingNowEmpty();
+          } else {
+            openFullPlayer();
+          }
+          return;
+        }
+
+        if (page === "settings") {
+          closeLibrary();
+          $("settingsOverlay").classList.add("open");
+        }
+      });
+    });
+
+    /* =========================================================
+       AUDIO EVENTS
+       ========================================================= */
+    audio.addEventListener("loadedmetadata", () => {
+      $("duration").textContent =
+        formatTime(audio.duration);
+    });
+
+    audio.addEventListener("timeupdate", () => {
+      const percent = audio.duration
+        ? (audio.currentTime / audio.duration) * 100
+        : 0;
+
+      $("seek").value = percent;
+      $("miniProgress").style.width = percent + "%";
+
+      $("currentTime").textContent =
+        formatTime(audio.currentTime);
+
+      $("duration").textContent =
+        formatTime(audio.duration);
+    });
+
+    audio.addEventListener("play", () => {
+      // Only a real successful play creates the floating player.
+      showMiniPlayer();
+
+      $("miniStatus").textContent = "Playing Now";
+      $("miniPlay").textContent = "⏸";
+      $("playButton").textContent = "⏸";
+      updateArtworkState();
+      renderSongList();
+      renderLibrary();
+    });
+
+    audio.addEventListener("pause", () => {
+      $("miniStatus").textContent = state.currentSongId
+        ? "Paused"
+        : "Tap a song to play";
+      $("miniPlay").textContent = "▶";
+      $("playButton").textContent = "▶";
+      updateArtworkState();
+      renderSongList();
+      renderLibrary();
+    });
+
+    audio.addEventListener("error", () => {
+      if (!state.currentSongId) return;
+
+      // Do not leave a stale floating player/blank clearance when
+      // the requested MP3 does not exist.
+      hideMiniPlayer();
+      closeFullPlayer();
+      updateArtworkState();
+
+      showToast(
+        "Put audio/" +
+        state.currentSongId +
+        ".mp3 in the audio folder."
+      );
+    });
+
+    audio.addEventListener("ended", () => {
+      // Repeat current song
+      if (state.repeat === 1) {
+        audio.currentTime = 0;
+        audio.play();
+        return;
+      }
+
+      // Repeat playlist / normal next song
+      playSongAt(getNextIndex(1));
+    });
+
+    /* =========================================================
+       GLOBAL BACK BUTTON
+       Available on every screen.
+       Priority:
+       1. Full player
+       2. Song action chooser
+       3. Search
+       4. Settings
+       5. Lyrics
+       6. Otherwise return to the normal song library
+       ========================================================= */
+    $("globalBackButton").onclick = () => {
+      // Close the top-most overlay first.
+      if ($("playlistPicker").classList.contains("open")) {
+        closePlaylistPicker();
+        return;
+      }
+
+      if ($("songActionOverlay").classList.contains("open")) {
+        closeSongActions();
+        return;
+      }
+
+      if ($("searchOverlay").classList.contains("open")) {
+        $("searchOverlay").classList.remove("open");
+        return;
+      }
+
+      if ($("playerOverlay").classList.contains("open")) {
+        closeFullPlayer();
+        return;
+      }
+
+      if ($("settingsOverlay").classList.contains("open")) {
+        $("settingsOverlay").classList.remove("open");
+        return;
+      }
+
+      if ($("playingNowEmpty").classList.contains("open")) {
+        closePlayingNowEmpty();
+        closeLibrary();
+        document.querySelectorAll(".nav-button")
+          .forEach(item => item.classList.toggle("active", item.dataset.page === "home"));
+        return;
+      }
+
+      if ($("libraryScreen").classList.contains("open")) {
+        closeLibrary();
+        document.querySelectorAll(".nav-button")
+          .forEach(item => item.classList.toggle("active", item.dataset.page === "home"));
+        return;
+      }
+
+      if ($("lyricsScreen").classList.contains("open")) {
+        closeLyrics();
+        return;
+      }
+
+      // Already on the main library: return to its top.
+      $("songListScroll").scrollTop = 0;
+    };
+
+    /* =========================================================
+       STARTUP
+       ========================================================= */
+    applyTheme();
+
+    $("fontSize").value = String(state.fontSize);
+    $("speedButton").textContent = state.speed + "×";
+
+    $("shuffleButton").classList.toggle(
+      "active",
+      state.shuffle
+    );
+
+    $("repeatButton").textContent =
+      state.repeat === 0 ? "🔁" :
+      state.repeat === 1 ? "🔂" :
+      "🔁∞";
+
+    renderSongList();
+    renderLibrary();
+    updateArtworkState();
+    updatePlayingNowButton();
+  </script>
+</body>
+</html>
